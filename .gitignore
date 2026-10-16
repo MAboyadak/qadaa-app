@@ -41,3 +41,9 @@ example
 # generated native folders
 /ios
 /android
+
+# local design renders
+design/*.png
+design/icon.svg
+design/fg.svg
+design/mono.svg
