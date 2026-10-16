@@ -1,0 +1,53 @@
+{
+  "_note": "Motivational lines with references. reviewed=false until a qualified scholar verifies them.",
+  "items": [
+    {
+      "id": "zumar_53",
+      "ar": "﴿قُلْ يَا عِبَادِيَ الَّذِينَ أَسْرَفُوا عَلَىٰ أَنفُسِهِمْ لَا تَقْنَطُوا مِن رَّحْمَةِ اللَّهِ ۚ إِنَّ اللَّهَ يَغْفِرُ الذُّنُوبَ جَمِيعًا﴾",
+      "en": "Say, \"O My servants who have transgressed against themselves, do not despair of the mercy of Allah. Indeed, Allah forgives all sins.\"",
+      "source": "الزمر: ٥٣",
+      "sourceEn": "Az-Zumar 39:53",
+      "reviewed": false
+    },
+    {
+      "id": "taha_82",
+      "ar": "﴿وَإِنِّي لَغَفَّارٌ لِّمَن تَابَ وَآمَنَ وَعَمِلَ صَالِحًا ثُمَّ اهْتَدَىٰ﴾",
+      "en": "\"And indeed, I am the Perpetual Forgiver of whoever repents and believes and does righteousness and then continues in guidance.\"",
+      "source": "طه: ٨٢",
+      "sourceEn": "Ta-Ha 20:82",
+      "reviewed": false
+    },
+    {
+      "id": "hud_114",
+      "ar": "﴿إِنَّ الْحَسَنَاتِ يُذْهِبْنَ السَّيِّئَاتِ﴾",
+      "en": "\"Indeed, good deeds do away with misdeeds.\"",
+      "source": "هود: ١١٤",
+      "sourceEn": "Hud 11:114",
+      "reviewed": false
+    },
+    {
+      "id": "baqarah_286",
+      "ar": "﴿لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا﴾",
+      "en": "\"Allah does not burden a soul beyond that it can bear.\"",
+      "source": "البقرة: ٢٨٦",
+      "sourceEn": "Al-Baqarah 2:286",
+      "reviewed": false
+    },
+    {
+      "id": "adwamuha",
+      "ar": "«أَحَبُّ الأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ»",
+      "en": "\"The most beloved deeds to Allah are the most consistent, even if small.\"",
+      "source": "البخاري ٦٤٦٤، مسلم ٧٨٣",
+      "sourceEn": "Bukhari 6464, Muslim 783",
+      "reviewed": false
+    },
+    {
+      "id": "nasiya",
+      "ar": "«مَنْ نَسِيَ صَلَاةً أَوْ نَامَ عَنْهَا فَكَفَّارَتُهَا أَنْ يُصَلِّيَهَا إِذَا ذَكَرَهَا»",
+      "en": "\"Whoever forgets a prayer or sleeps through it, its expiation is to pray it when he remembers it.\"",
+      "source": "مسلم ٦٨٤",
+      "sourceEn": "Muslim 684",
+      "reviewed": false
+    }
+  ]
+}
