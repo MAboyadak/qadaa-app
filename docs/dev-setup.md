@@ -33,3 +33,10 @@ That calls for a **development build**, which is your own app containing the Exp
 ## Automated tests
 - Unit: the estimate formula, ledger maths and plan projection (Jest). These are pure functions and the highest value.
 - E2E later: Maestro flows (onboarding, log + undo).
+
+## Notes from setting this up on this Mac (Oct 2026)
+- SDK: `~/Library/Android/sdk`, with platform 37.0, build-tools 37.0.0, NDK 27.1.12297006, emulator image `android-36;google_apis;arm64-v8a` (AVD `qadaa_pixel`)
+- JDK: `brew install openjdk@17`; export `JAVA_HOME=/opt/homebrew/opt/openjdk@17`
+- On this network GitHub downloads time out, so Gradle was fetched from a mirror and **verified against the official SHA-256**; `android/` (generated, gitignored) points the wrapper to `~/Library/Android/gradle-9.4.1-bin.zip`. Re-running `expo prebuild` resets it.
+- Fast dev build for the emulator: `cd android && ./gradlew app:assembleDebug -PreactNativeArchitectures=arm64-v8a`
+- Run: `adb install -r android/app/build/outputs/apk/debug/app-debug.apk && adb reverse tcp:8081 tcp:8081 && npx expo start`

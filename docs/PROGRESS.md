@@ -8,11 +8,13 @@
 | M1: estimate (onboarding) + home logging + local DB | ✅ code done |
 | M2: planner, reminders (prayer-time nudges + dhikr), backup export/import | ✅ code done |
 | M3: progress screen, milestones, store listing, privacy policy, feature graphic | ✅ code/docs done |
-| Emulator verification + screenshots | ⏳ in progress (slow Android SDK download) |
-| Launch video | ⏳ after screenshots |
+| Emulator verification (Arabic + English, light + dark, notifications) | ✅ done, 8 issues found and fixed |
+| Store screenshots (5, framed) + feature graphic | ✅ `docs/store/` |
+| Launch video | ✅ `video/out/qadaa-launch.mp4` (render with `npm run render`) |
+| Release APK for sideloading | ✅ `android/app/build/outputs/apk/release/app-release.apk` (debug-signed) |
 
 ## Quality gates
-- `npm test`: 20 domain tests pass
+- `npm test`: 24 tests pass
 - `npm run typecheck`: clean
 - `npm run lint`: clean
 - `npx expo export --platform android`: bundles successfully
@@ -25,3 +27,17 @@
 4. **Confirm the app name and package id** (`com.qadaa.prayers`). The package can't change after the first upload.
 5. **Git identity:** commits use your global git email (work address). For a personal project you may want `git config user.email <personal>` in this repo.
 6. **Expo account** (free), only if you want cloud builds via EAS instead of local Gradle builds.
+
+## Verified on the emulator (Pixel 7, Android 16 / API 36)
+- Onboarding end-to-end in Arabic (RTL); live language switch both ways
+- Estimate maths (16 years × 75% → 4,384 per prayer), pace and finish dates
+- Log, undo, milestone celebration, today's target dots
+- Manual adjust (append-only ledger), re-estimate flow, data survives reinstall
+- Notification with action buttons; "Prayed it ✓" logs from the background exactly once
+- Plan, Progress (heatmap, milestones), Settings; dark mode
+
+## Not yet verified
+- Export/import backup on a real device (share sheet / file picker)
+- GPS location (the emulator used a city from the list)
+- Reminders on Samsung/Xiaomi battery savers (use Settings → "Send a test reminder")
+- Release-signed AAB for Play (needs your upload key, or let EAS manage signing)

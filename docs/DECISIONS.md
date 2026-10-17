@@ -33,3 +33,10 @@ Choices made during autonomous development. Each can be revisited; the "Why" is 
 | 27 | Icon: gold crescent completing its circle with 5 dots (the five prayers) | Reads as "completing what was missed". Generated from `design/motif.svg`. |
 | 28 | No analytics or crash SDKs (not even Sentry) | Privacy promise: "No data collected". |
 | 29 | Jest + ts-jest for pure domain tests only | Fast and simple; UI is verified on the emulator. |
+| 30 | Language switch flips layout via the root view's `direction` style, not a reload | In the new architecture a JS reload doesn't refresh `I18nManager.isRTL`; reloading looped forever (found on the emulator). |
+| 31 | Built-in tabular Hijri calendar fallback (±1 day vs Umm al-Qura) | Hermes' Intl has no `islamic-umalqura` calendar, so the Hijri date was missing. |
+| 32 | `SCHEDULE_EXACT_ALARM` declared + opt-in toggle in Settings, plus a "send test reminder" button | Inexact alarms got a 1-hour delivery window on the emulator. Play allows this permission without a declaration (unlike `USE_EXACT_ALARM`). The test button lets users check reminders on OEM battery savers. |
+| 33 | `countOf()` for Arabic number agreement (1, 2, 3–10, 11–99, round hundreds) | "٤ صلاة" / "٥ دقيقة" read as mistakes to Arabic speakers. |
+| 34 | Below 0.1% progress, Home shows "made up N so far" instead of "0%" | 0% after real effort is discouraging (tone rule). |
+| 35 | Launch video in Remotion (`video/`), 4:5, silent with bilingual captions | Code-driven, so it's easy to re-render when screens change; 4:5 suits the LinkedIn feed. |
+| 36 | Store screenshots are framed 1080×1920 images with Arabic headlines | Raw 1080×2400 captures exceed Play's 2:1 aspect limit. |
