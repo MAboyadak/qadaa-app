@@ -34,7 +34,7 @@ import { spacing } from '@/theme';
 export default function SettingsScreen() {
   const db = useSQLiteContext();
   const data = useAppData();
-  const { t, locale } = useI18n();
+  const { t, locale, nc } = useI18n();
   const toast = useToast();
   const profile = data.profile!;
   const [showLocation, setShowLocation] = useState(false);
@@ -180,7 +180,7 @@ export default function SettingsScreen() {
             min={5}
             max={90}
             step={5}
-            format={(v) => t('common.minutes', { n: v })}
+            format={(v) => nc(v, 'minute')}
             onChange={(v) => data.updateProfile({ nudgeOffsetMin: v }, { reschedule: true })}
           />
         ) : null}

@@ -15,8 +15,6 @@ export const ar = {
     undo: 'تراجع',
     on: 'مفعّل',
     off: 'متوقف',
-    days: '{n} يوم',
-    minutes: '{n} دقيقة',
     years: '{n} سنة',
   },
   prayers: {
@@ -79,8 +77,8 @@ export const ar = {
     result: {
       title: 'تقدير ما فاتك',
       subtitle: 'قرّبنا الأرقام للأعلى احتياطًا. يمكنك تعديل أي رقم.',
-      total: 'نحو {days} يوم من الصلوات',
-      totalPrayers: '{n} صلاة',
+      total: 'نحو {days} من الصلوات',
+      totalPrayers: '{n}',
       reassure: 'قد يبدو الرقم كبيرًا، لكن الطريق يُقطع خطوة خطوة، وأحبّ الأعمال إلى الله أدومها وإن قلّ.',
     },
     pace: {
@@ -102,15 +100,15 @@ export const ar = {
   },
   pace: {
     with_each: 'صلاة قضاء مع كل فريضة',
-    with_eachHint: 'يوم قضاء كل يوم (٥ صلوات)',
+    with_eachHint: 'يوم قضاء كل يوم',
     days_per_day: 'أكثر من يوم قضاء يوميًا',
-    days_per_dayHint: '{n} أيام قضاء كل يوم',
+    days_per_dayHint: 'أيام القضاء يوميًا: {n}',
     minutes_per_day: 'حسب وقتي المتاح',
-    minutes_per_dayHint: '{n} دقيقة يوميًا',
+    minutes_per_dayHint: '{n} يوميًا',
     daysPerDayLabel: 'أيام القضاء يوميًا',
     minutesPerDayLabel: 'الدقائق المتاحة يوميًا',
     minutesPerQadaDay: 'مدة يوم قضاء كامل (١٧ ركعة)',
-    target: 'هدفك اليومي: {n} صلاة',
+    target: 'هدفك اليومي: {n}',
   },
   home: {
     remaining: 'متبقٍ',
@@ -129,6 +127,8 @@ export const ar = {
     markOne: 'سجّل صلاة {prayer} قضاءً',
     undoOne: 'تراجع عن آخر {prayer}',
     percentDone: '{pct}٪ مكتمل',
+    cardLine: 'متبقٍ {r} · تم {d}',
+    madeUpCount: 'قضيت {n} حتى الآن',
   },
   plan: {
     title: 'الخطة',
@@ -147,7 +147,7 @@ export const ar = {
     last12Weeks: 'آخر ١٢ أسبوعًا',
     milestones: 'المحطات',
     nextMilestone: 'المحطة القادمة',
-    remainingToNext: 'بقي {n} صلاة',
+    remainingToNext: 'بقي {n}',
     less: 'أقل',
     more: 'أكثر',
   },

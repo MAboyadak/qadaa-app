@@ -16,8 +16,6 @@ export const en: Strings = {
     undo: 'Undo',
     on: 'On',
     off: 'Off',
-    days: '{n} days',
-    minutes: '{n} min',
     years: '{n} years',
   },
   prayers: {
@@ -80,8 +78,8 @@ export const en: Strings = {
     result: {
       title: 'Your estimate',
       subtitle: 'We rounded up to be safe. You can edit any number.',
-      total: 'About {days} days of prayers',
-      totalPrayers: '{n} prayers',
+      total: 'About {days} of prayers',
+      totalPrayers: '{n}',
       reassure: 'The number may look large, but the road is walked step by step. The most beloved deeds to Allah are the most consistent, even if small.',
     },
     pace: {
@@ -103,15 +101,15 @@ export const en: Strings = {
   },
   pace: {
     with_each: 'One make-up with each prayer',
-    with_eachHint: 'One make-up day per day (5 prayers)',
+    with_eachHint: 'One make-up day per day',
     days_per_day: 'More than one day per day',
-    days_per_dayHint: '{n} make-up days per day',
+    days_per_dayHint: 'Make-up days per day: {n}',
     minutes_per_day: 'Based on my free time',
-    minutes_per_dayHint: '{n} minutes per day',
+    minutes_per_dayHint: '{n} per day',
     daysPerDayLabel: 'Make-up days per day',
     minutesPerDayLabel: 'Minutes available per day',
     minutesPerQadaDay: 'Time for one full make-up day (17 rakʿāt)',
-    target: 'Your daily target: {n} prayers',
+    target: 'Your daily target: {n}',
   },
   home: {
     remaining: 'Remaining',
@@ -130,6 +128,8 @@ export const en: Strings = {
     markOne: 'Log one {prayer} make-up',
     undoOne: 'Undo last {prayer}',
     percentDone: '{pct}% complete',
+    cardLine: '{r} left · {d} done',
+    madeUpCount: "You've made up {n} so far",
   },
   plan: {
     title: 'Plan',
@@ -148,7 +148,7 @@ export const en: Strings = {
     last12Weeks: 'Last 12 weeks',
     milestones: 'Milestones',
     nextMilestone: 'Next milestone',
-    remainingToNext: '{n} prayers to go',
+    remainingToNext: '{n} to go',
     less: 'Less',
     more: 'More',
   },

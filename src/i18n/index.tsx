@@ -40,6 +40,32 @@ export function formatNumber(n: number, locale: Locale): string {
   return fmt.format(n);
 }
 
+const UNITS = {
+  prayer: { one: 'صلاة واحدة', two: 'صلاتان', few: 'صلوات', acc: 'صلاة', gen: 'صلاة', en: ['prayer', 'prayers'] },
+  day: { one: 'يوم واحد', two: 'يومان', few: 'أيام', acc: 'يومًا', gen: 'يوم', en: ['day', 'days'] },
+  minute: { one: 'دقيقة واحدة', two: 'دقيقتان', few: 'دقائق', acc: 'دقيقة', gen: 'دقيقة', en: ['min', 'min'] },
+} as const;
+export type CountUnit = keyof typeof UNITS;
+
+/**
+ * "N units" with Arabic number agreement: 1 and 2 have their own forms, 3–10 take the
+ * plural, 11–99 the accusative singular, and round hundreds/thousands the genitive singular.
+ */
+export function countOf(n: number, unit: CountUnit, locale: Locale): string {
+  const u = UNITS[unit];
+  const num = formatNumber(n, locale);
+  if (locale === 'en') return `${num} ${u.en[n === 1 ? 0 : 1]}`;
+  if (n === 1) return u.one;
+  if (n === 2) return u.two;
+  const mod100 = n % 100;
+  if (mod100 >= 3 && mod100 <= 10) return `${num} ${u.few}`;
+  return `${num} ${mod100 >= 11 ? u.acc : u.gen}`;
+}
+
+export function countPrayers(n: number, locale: Locale): string {
+  return countOf(n, 'prayer', locale);
+}
+
 export function translate(locale: Locale, key: StringKey, params?: TParams): string {
   const value = key
     .split('.')
@@ -70,6 +96,10 @@ interface I18nValue {
   rtl: boolean;
   t: (key: StringKey, params?: TParams) => string;
   n: (value: number) => string;
+  /** Localized "N prayers" with correct plural/dual forms. */
+  np: (value: number) => string;
+  /** Localized count of any unit, e.g. nc(5, 'minute'). */
+  nc: (value: number, unit: CountUnit) => string;
 }
 
 const I18nContext = createContext<I18nValue | null>(null);
@@ -77,7 +107,9 @@ const I18nContext = createContext<I18nValue | null>(null);
 export function I18nProvider({ locale, children }: { locale: Locale; children: ReactNode }) {
   const t = useCallback((key: StringKey, params?: TParams) => translate(locale, key, params), [locale]);
   const n = useCallback((value: number) => formatNumber(value, locale), [locale]);
-  const value = useMemo(() => ({ locale, rtl: isRtlLocale(locale), t, n }), [locale, t, n]);
+  const np = useCallback((value: number) => countPrayers(value, locale), [locale]);
+  const nc = useCallback((value: number, unit: CountUnit) => countOf(value, unit, locale), [locale]);
+  const value = useMemo(() => ({ locale, rtl: isRtlLocale(locale), t, n, np, nc }), [locale, t, n, np, nc]);
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 

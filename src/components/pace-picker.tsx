@@ -23,7 +23,7 @@ export function PacePicker({
   minutesPerQadaDay: number;
 }) {
   const c = useColors();
-  const { t, locale } = useI18n();
+  const { t, locale, np, nc } = useI18n();
   const today = new Date();
 
   const option = (type: PaceType) => {
@@ -36,7 +36,7 @@ export function PacePicker({
         ? t('pace.with_eachHint')
         : type === 'days_per_day'
           ? t('pace.days_per_dayHint', { n: candidate.value })
-          : t('pace.minutes_per_dayHint', { n: candidate.value });
+          : t('pace.minutes_per_dayHint', { n: nc(candidate.value, 'minute') });
     return (
       <Pressable
         key={type}
@@ -59,7 +59,7 @@ export function PacePicker({
         </View>
         <AppText muted>{hint}</AppText>
         <AppText variant="label" color="primary">
-          {t('pace.target', { n: target })}
+          {t('pace.target', { n: np(target) })}
           {finish ? ` · ${t('onboarding.pace.finish', { date: formatDate(finish, locale) })}` : ''}
         </AppText>
         {selected && type === 'days_per_day' ? (

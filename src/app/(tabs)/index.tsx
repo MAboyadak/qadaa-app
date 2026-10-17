@@ -17,7 +17,7 @@ import { spacing, useColors } from '@/theme';
 
 export default function Home() {
   const data = useAppData();
-  const { t, n, locale } = useI18n();
+  const { t, n, np, locale } = useI18n();
   const toast = useToast();
   const today = new Date();
 
@@ -78,7 +78,9 @@ export default function Home() {
           <AppText muted>{t('home.remaining')}</AppText>
         </ProgressRing>
         <AppText variant="label" color="primary">
-          {t('home.percentDone', { pct: Math.floor(pct * 10) / 10 })}
+          {pct >= 0.1 || data.madeUpTotal === 0
+            ? t('home.percentDone', { pct: Math.floor(pct * 10) / 10 })
+            : t('home.madeUpCount', { n: np(data.madeUpTotal) })}
         </AppText>
         <AppText muted center>
           {allDone

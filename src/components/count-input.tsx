@@ -18,6 +18,7 @@ export function CountInput({ label, value, onChange }: { label: string; value: n
       <TextInput
         accessibilityLabel={label}
         keyboardType="number-pad"
+        selectTextOnFocus
         value={shown}
         onChangeText={(text) => {
           const latin = text.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));

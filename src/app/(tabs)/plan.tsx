@@ -10,7 +10,7 @@ import { useAppData } from '@/state/app-data';
 
 export default function PlanScreen() {
   const data = useAppData();
-  const { t, locale } = useI18n();
+  const { t, locale, nc } = useI18n();
   const [pace, setPace] = useState<Pace>(data.plan ?? { type: 'with_each', value: 1 });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -71,7 +71,7 @@ export default function PlanScreen() {
           min={5}
           max={40}
           onChange={(v) => data.updateProfile({ minutesPerQadaDay: v })}
-          format={(v) => t('common.minutes', { n: v })}
+          format={(v) => nc(v, 'minute')}
         />
       </Card>
     </Screen>

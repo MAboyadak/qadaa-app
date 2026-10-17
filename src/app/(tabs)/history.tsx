@@ -9,7 +9,7 @@ import { spacing, useColors } from '@/theme';
 
 export default function HistoryScreen() {
   const data = useAppData();
-  const { t, n } = useI18n();
+  const { t, n, np } = useI18n();
   const c = useColors();
   const milestones = milestonesFor(data.totalDebt, data.prayersPerDay);
   const next = nextMilestone(data.madeUpTotal, data.totalDebt, data.prayersPerDay);
@@ -38,7 +38,7 @@ export default function HistoryScreen() {
             {t('history.nextMilestone')}
           </AppText>
           <AppText variant="heading">{t(`milestones.${next.id}`)}</AppText>
-          <AppText muted>{t('history.remainingToNext', { n: next.threshold - data.madeUpTotal })}</AppText>
+          <AppText muted>{t('history.remainingToNext', { n: np(next.threshold - data.madeUpTotal) })}</AppText>
         </Card>
       ) : null}
 

@@ -29,7 +29,7 @@ export function PrayerCard({
   onUndo: () => void;
 }) {
   const c = useColors();
-  const { t, n } = useI18n();
+  const { t } = useI18n();
   const name = t(`prayers.${prayer}`);
   const done = remaining === 0;
   return (
@@ -59,7 +59,7 @@ export function PrayerCard({
       <View style={{ flex: 1 }}>
         <AppText variant="bodyStrong">{name}</AppText>
         <AppText variant="caption" muted>
-          {t('home.remaining')} {n(remaining)} · {t('home.madeUp')} {n(madeUp)}
+          {t('home.cardLine', { r: remaining, d: madeUp })}
         </AppText>
       </View>
       <IconButton

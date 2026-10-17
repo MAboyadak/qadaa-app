@@ -452,7 +452,7 @@ function ResultStep({
   includeWitr: boolean;
   onChange: (c: PrayerCounts) => void;
 }) {
-  const { t } = useI18n();
+  const { t, np, nc } = useI18n();
   const prayers = activePrayers(includeWitr);
   const total = sumCounts(counts, includeWitr);
   const days = Math.ceil(total / prayers.length);
@@ -462,9 +462,9 @@ function ResultStep({
       <AppText muted>{t('onboarding.result.subtitle')}</AppText>
       <Card tone="primary" style={{ alignItems: 'center' }}>
         <AppText variant="title" color="primary" center>
-          {t('onboarding.result.total', { days })}
+          {t('onboarding.result.total', { days: nc(days, 'day') })}
         </AppText>
-        <AppText muted>{t('onboarding.result.totalPrayers', { n: total })}</AppText>
+        <AppText muted>{t('onboarding.result.totalPrayers', { n: np(total) })}</AppText>
       </Card>
       <Card>
         {prayers.map((p) => (
