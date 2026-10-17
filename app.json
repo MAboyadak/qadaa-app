@@ -25,7 +25,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.ACCESS_COARSE_LOCATION", "android.permission.RECEIVE_BOOT_COMPLETED"],
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ],
       "blockedPermissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_BACKGROUND_LOCATION",
@@ -37,8 +41,12 @@
       "favicon": "./assets/images/favicon.png"
     },
     "locales": {
-      "ar": { "app_name": "قضاء" },
-      "en": { "app_name": "Qadaa" }
+      "ar": {
+        "app_name": "قضاء"
+      },
+      "en": {
+        "app_name": "Qadaa"
+      }
     },
     "plugins": [
       "expo-router",
@@ -51,7 +59,12 @@
         }
       ],
       "expo-sqlite",
-      ["expo-localization", { "supportsRTL": true }],
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true
+        }
+      ],
       "expo-sharing",
       "@react-native-community/datetimepicker",
       [

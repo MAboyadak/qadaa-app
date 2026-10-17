@@ -137,6 +137,7 @@ export const en: Strings = {
     remainingTime: 'Time remaining',
     duration: '{y} years {m} months',
     durationShort: '{m} months {d} days',
+    durationYears: '{y} years',
     noFinish: 'Choose a pace to calculate it',
   },
   history: {
@@ -179,6 +180,10 @@ export const en: Strings = {
     dhikrAdd: 'Add reminder',
     dhikrTime: 'Time',
     quietHint: 'Reminders are only sent after prayer times and at the times you choose.',
+    exact: 'Remind me at the exact time',
+    exactHint: 'Without it, Android battery saving may delay a reminder by up to an hour.',
+    test: 'Send a test reminder',
+    testSent: 'A test reminder will arrive in a few seconds',
     data: 'Data',
     adjust: 'Adjust counts manually',
     reestimate: 'Re-estimate',

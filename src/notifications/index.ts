@@ -53,6 +53,30 @@ export async function requestPermission(): Promise<boolean> {
   return next.granted;
 }
 
+/** Exact alarms keep prayer-time nudges on time (Android 12+ may otherwise delay them ~1h). */
+export async function hasExactAlarms(): Promise<boolean> {
+  if (Platform.OS !== 'android') return true;
+  return (await Notifications.getExactAlarmPermissionsAsync()).granted;
+}
+
+export async function requestExactAlarms(): Promise<boolean> {
+  if (Platform.OS !== 'android') return true;
+  return (await Notifications.requestExactAlarmPermissionsAsync()).granted;
+}
+
+/** A qada nudge in a few seconds, so users can check reminders work on their phone. */
+export async function sendTestNudge(locale: 'ar' | 'en'): Promise<void> {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: translate(locale, 'notifications.qadaTitle', { prayer: translate(locale, 'prayers.dhuhr') }),
+      body: translate(locale, 'notifications.qadaBody'),
+      data: { kind: 'qada', prayer: 'dhuhr' },
+      categoryIdentifier: CATEGORY_QADA,
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 5, channelId: CHANNEL_QADA },
+  });
+}
+
 export async function hasPermission(): Promise<boolean> {
   return (await Notifications.getPermissionsAsync()).granted;
 }

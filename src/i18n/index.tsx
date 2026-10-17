@@ -1,7 +1,6 @@
 import { getLocales } from 'expo-localization';
-import * as Updates from 'expo-updates';
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
-import { DevSettings, I18nManager, Platform } from 'react-native';
+import { I18nManager, Platform } from 'react-native';
 
 import { ar, type Strings } from './ar';
 import { en } from './en';
@@ -55,17 +54,15 @@ export function translate(locale: Locale, key: StringKey, params?: TParams): str
 }
 
 /**
- * Makes the native layout direction match the locale. Changing direction needs a reload;
- * returns true when a reload was triggered.
+ * Persists the native layout direction for the next cold start. The current session is
+ * flipped by the root view's `direction` style instead: in the new architecture a JS
+ * reload does not refresh `I18nManager.isRTL`, so reloading would loop forever.
  */
-export async function applyDirection(locale: Locale): Promise<boolean> {
+export function persistDirection(locale: Locale): void {
   const rtl = isRtlLocale(locale);
-  if (Platform.OS === 'web' || I18nManager.isRTL === rtl) return false;
+  if (Platform.OS === 'web' || I18nManager.isRTL === rtl) return;
   I18nManager.allowRTL(rtl);
   I18nManager.forceRTL(rtl);
-  if (__DEV__) DevSettings.reload();
-  else await Updates.reloadAsync();
-  return true;
 }
 
 interface I18nValue {

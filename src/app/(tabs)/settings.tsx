@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 
 import { pickTime } from '@/components/date-field';
@@ -27,7 +27,7 @@ import { pickAndRestoreBackup, shareBackup } from '@/lib/backup';
 import { estimateFromStored } from '@/lib/estimate-store';
 import { formatTime } from '@/lib/format';
 import { CALC_METHODS } from '@/lib/prayer-times';
-import { requestPermission } from '@/notifications';
+import { hasExactAlarms, requestExactAlarms, requestPermission, sendTestNudge } from '@/notifications';
 import { useAppData } from '@/state/app-data';
 import { spacing } from '@/theme';
 
@@ -38,6 +38,23 @@ export default function SettingsScreen() {
   const toast = useToast();
   const profile = data.profile!;
   const [showLocation, setShowLocation] = useState(false);
+  const [exact, setExact] = useState(true);
+
+  useEffect(() => {
+    hasExactAlarms().then(setExact);
+  }, []);
+
+  const enableExact = async () => {
+    const granted = await requestExactAlarms();
+    setExact(granted);
+    if (granted) await data.reschedule();
+  };
+
+  const testNudge = async () => {
+    if (!(await requestPermission())) return;
+    await sendTestNudge(locale);
+    toast({ message: t('settings.testSent'), durationMs: 3000 });
+  };
 
   const setLocale = (next: Locale) => {
     if (next === locale) return;
@@ -167,6 +184,10 @@ export default function SettingsScreen() {
             onChange={(v) => data.updateProfile({ nudgeOffsetMin: v }, { reschedule: true })}
           />
         ) : null}
+        {profile.nudgesEnabled ? (
+          <SwitchRow label={t('settings.exact')} hint={t('settings.exactHint')} value={exact} onChange={(on) => on && enableExact()} />
+        ) : null}
+        <Button title={t('settings.test')} icon="bell-ring-outline" variant="ghost" onPress={testNudge} />
         <Divider />
         <AppText variant="bodyStrong">{t('settings.dhikr')}</AppText>
         {data.dhikr.map((r) => (

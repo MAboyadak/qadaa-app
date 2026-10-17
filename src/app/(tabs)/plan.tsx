@@ -47,7 +47,11 @@ export default function PlanScreen() {
         {dur ? (
           <AppText variant="label">
             {t('plan.remainingTime')}:{' '}
-            {dur.years > 0 ? t('plan.duration', { y: dur.years, m: dur.months }) : t('plan.durationShort', { m: dur.months, d: dur.days })}
+            {dur.years > 0
+              ? dur.months > 0
+                ? t('plan.duration', { y: dur.years, m: dur.months })
+                : t('plan.durationYears', { y: dur.years })
+              : t('plan.durationShort', { m: dur.months, d: dur.days })}
           </AppText>
         ) : null}
       </Card>

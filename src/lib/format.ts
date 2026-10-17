@@ -1,4 +1,6 @@
-import type { Locale } from '@/i18n';
+import { formatNumber, type Locale } from '@/i18n';
+
+import { hijriMonthName, toHijri } from './hijri';
 
 const cache = new Map<string, Intl.DateTimeFormat | null>();
 
@@ -28,15 +30,18 @@ export function formatShortDate(date: Date, locale: Locale): string {
   return fmt ? fmt.format(date) : date.toDateString();
 }
 
-/** Hijri (Umm al-Qura) date, or null when the runtime lacks the calendar. */
-export function formatHijri(date: Date, locale: Locale): string | null {
+/** Hijri date: Umm al-Qura via Intl when available, otherwise the tabular calendar. */
+export function formatHijri(date: Date, locale: Locale): string {
   const fmt = formatter(`h-${locale}`, `${lang(locale)}-u-ca-islamic-umalqura`, {
     calendar: 'islamic-umalqura',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
-  return fmt ? fmt.format(date) : null;
+  if (fmt) return fmt.format(date);
+  const h = toHijri(date);
+  const n = (v: number) => formatNumber(v, locale).replace(/[,٬]/g, '');
+  return `${n(h.day)} ${hijriMonthName(h.month, locale)} ${n(h.year)}${locale === 'ar' ? 'هـ' : ' AH'}`;
 }
 
 export function formatTime(date: Date, locale: Locale): string {

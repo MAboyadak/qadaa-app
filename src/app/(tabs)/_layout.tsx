@@ -25,7 +25,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: c.primary,
         tabBarInactiveTintColor: c.textMuted,
-        tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border, height: 64, paddingTop: 6 },
+        tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border, paddingTop: 6 },
         tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 12 },
       }}>
       <Tabs.Screen name="index" options={{ title: t('appName'), tabBarIcon: icon('home-variant-outline') }} />

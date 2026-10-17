@@ -10,14 +10,14 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { useEffect } from 'react';
+import { useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ToastProvider } from '@/components/toast';
 import { DATABASE_NAME, migrate } from '@/db/schema';
-import { applyDirection, deviceLocale, I18nProvider } from '@/i18n';
+import { deviceLocale, I18nProvider, isRtlLocale, persistDirection } from '@/i18n';
 import { handleResponse, setupNotifications } from '@/notifications';
 import { AppDataProvider, useAppData } from '@/state/app-data';
 import { palette } from '@/theme';
@@ -50,28 +50,22 @@ export default function RootLayout() {
 function LocaleGate() {
   const { profile } = useAppData();
   const locale = profile?.locale ?? deviceLocale();
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    applyDirection(locale).then((reloading) => {
-      if (cancelled || reloading) return;
-      setupNotifications(locale).catch(() => {});
-      setReady(true);
-      SplashScreen.hideAsync();
-    });
-    return () => {
-      cancelled = true;
-    };
+    persistDirection(locale);
+    setupNotifications(locale).catch(() => {});
+    SplashScreen.hideAsync();
   }, [locale]);
 
-  if (!ready) return null;
   return (
     <I18nProvider locale={locale}>
-      <ToastProvider>
-        <NotificationResponses />
-        <Navigator />
-      </ToastProvider>
+      {/* `direction` flips every row and start/end style for the chosen language, live */}
+      <View style={{ flex: 1, direction: isRtlLocale(locale) ? 'rtl' : 'ltr' }}>
+        <ToastProvider>
+          <NotificationResponses />
+          <Navigator />
+        </ToastProvider>
+      </View>
     </I18nProvider>
   );
 }
