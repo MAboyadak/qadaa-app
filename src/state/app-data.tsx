@@ -9,6 +9,7 @@ import {
   currentStreak,
   dailyTarget,
   daysSinceLastQada,
+  longestStreak,
   projectedFinish,
   type Pace,
 } from '@/domain/plan';
@@ -31,6 +32,7 @@ export interface AppData {
   todayDone: number;
   finishDate: Date | null;
   streak: number;
+  bestStreak: number;
   idleDays: number | null;
 }
 
@@ -122,6 +124,7 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
       todayDone: s.byDay.get(toDayKey(s.today)) ?? 0,
       finishDate: projectedFinish(remainingTotal, target, s.today),
       streak: currentStreak(s.byDay, s.today),
+      bestStreak: longestStreak(s.byDay),
       idleDays: daysSinceLastQada(s.byDay, s.today),
     };
   }, [state]);
