@@ -70,7 +70,7 @@ export async function sendTestNudge(locale: 'ar' | 'en'): Promise<void> {
     content: {
       title: translate(locale, 'notifications.qadaTitle', { prayer: translate(locale, 'prayers.dhuhr') }),
       body: translate(locale, 'notifications.qadaBody'),
-      data: { kind: 'qada', prayer: 'dhuhr' },
+      data: { kind: 'test' },
       categoryIdentifier: CATEGORY_QADA,
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 5, channelId: CHANNEL_QADA },
@@ -131,24 +131,23 @@ export async function rescheduleAll(db: SQLiteDatabase, now = new Date()): Promi
 
 /**
  * Handles a notification response (foreground listener or background task).
- * Returns true when it logged a prayer.
+ * Identifies prayer actions even when another handler already logged them.
  */
 export async function handleResponse(
   db: SQLiteDatabase,
   response: Pick<Notifications.NotificationResponse, 'actionIdentifier' | 'notification'>,
-): Promise<boolean> {
+): Promise<{ logged: boolean; prayerAction: boolean }> {
   const data = response.notification.request.content.data as { kind?: string; prayer?: string } | undefined;
   if (response.actionIdentifier !== ACTION_DONE || data?.kind !== 'qada' || !data.prayer || !isPrayer(data.prayer)) {
-    if (response.actionIdentifier === ACTION_LATER) {
+    if (response.actionIdentifier === ACTION_DONE || response.actionIdentifier === ACTION_LATER) {
       await Notifications.dismissNotificationAsync(response.notification.request.identifier);
     }
-    return false;
+    return { logged: false, prayerAction: false };
   }
   const id = response.notification.request.identifier;
   // Both the background task and the foreground listener may see the same response.
   const source = `notif:${id}`;
-  const seen = await db.getFirstAsync('SELECT 1 FROM ledger WHERE source = ?', source);
-  const logged = seen ? false : await logMadeUp(db, data.prayer, source);
+  const logged = await logMadeUp(db, data.prayer, source);
   await Notifications.dismissNotificationAsync(id);
-  return logged;
+  return { logged, prayerAction: true };
 }

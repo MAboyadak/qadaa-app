@@ -76,7 +76,7 @@ function NotificationResponses() {
   const { refresh } = useAppData();
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener(async (response) => {
-      if (await handleResponse(db, response)) await refresh();
+      if ((await handleResponse(db, response)).prayerAction) await refresh();
     });
     return () => sub.remove();
   }, [db, refresh]);

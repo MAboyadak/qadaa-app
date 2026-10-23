@@ -185,8 +185,12 @@ export async function getSummary(db: SQLiteDatabase): Promise<PrayerSummary> {
 
 export async function getMadeUpByDay(db: SQLiteDatabase, sinceDay?: DayKey): Promise<Map<DayKey, number>> {
   const rows = await db.getAllAsync<{ day: string; n: number }>(
-    `SELECT day, SUM(-delta) AS n FROM ledger
-     WHERE kind IN ('made_up','undo') AND day >= ? GROUP BY day`,
+    `SELECT CASE WHEN l.kind = 'undo' THEN COALESCE(r.day, l.day) ELSE l.day END AS day,
+       SUM(-l.delta) AS n
+     FROM ledger l LEFT JOIN ledger r ON r.id = l.ref_id
+     WHERE l.kind IN ('made_up','undo')
+       AND (CASE WHEN l.kind = 'undo' THEN COALESCE(r.day, l.day) ELSE l.day END) >= ?
+     GROUP BY 1`,
     sinceDay ?? '0000-00-00',
   );
   return new Map(rows.map((r) => [r.day, r.n]));
@@ -216,28 +220,43 @@ export async function setRemaining(db: SQLiteDatabase, target: Partial<PrayerCou
 }
 
 /** Logs one made-up prayer. Returns false when nothing remains for that prayer. */
-export async function logMadeUp(db: SQLiteDatabase, prayer: Prayer, source = 'app'): Promise<boolean> {
-  const row = await db.getFirstAsync<{ remaining: number | null }>(
-    'SELECT SUM(delta) AS remaining FROM ledger WHERE prayer = ?',
+export async function logMadeUp(
+  db: SQLiteDatabase,
+  prayer: Prayer,
+  source = 'app',
+  now = new Date(),
+): Promise<boolean> {
+  const notificationGuard = source.startsWith('notif:')
+    ? 'AND NOT EXISTS (SELECT 1 FROM ledger WHERE source = ?)'
+    : '';
+  const result = await db.runAsync(
+    `INSERT INTO ledger (prayer, delta, kind, ref_id, source, day, created_at)
+     SELECT ?, -1, 'made_up', NULL, ?, ?, ?
+     WHERE COALESCE((SELECT SUM(delta) FROM ledger WHERE prayer = ?), 0) > 0
+       ${notificationGuard}`,
     prayer,
+    source,
+    toDayKey(now),
+    now.toISOString(),
+    prayer,
+    ...(source.startsWith('notif:') ? [source] : []),
   );
-  if ((row?.remaining ?? 0) <= 0) return false;
-  await append(db, prayer, -1, 'made_up', { source });
-  return true;
+  return result.changes === 1;
 }
 
-/** Reverses the latest not-yet-undone made-up entry for the prayer. */
-export async function undoLast(db: SQLiteDatabase, prayer: Prayer): Promise<boolean> {
-  const row = await db.getFirstAsync<{ id: number }>(
-    `SELECT l.id FROM ledger l
+/** Reverses the latest not-yet-undone made-up entry on its original day. */
+export async function undoLast(db: SQLiteDatabase, prayer: Prayer, now = new Date()): Promise<boolean> {
+  const result = await db.runAsync(
+    `INSERT INTO ledger (prayer, delta, kind, ref_id, source, day, created_at)
+     SELECT ?, 1, 'undo', l.id, 'app', l.day, ? FROM ledger l
      WHERE l.prayer = ? AND l.kind = 'made_up'
        AND NOT EXISTS (SELECT 1 FROM ledger u WHERE u.kind = 'undo' AND u.ref_id = l.id)
      ORDER BY l.id DESC LIMIT 1`,
     prayer,
+    now.toISOString(),
+    prayer,
   );
-  if (!row) return false;
-  await append(db, prayer, 1, 'undo', { refId: row.id });
-  return true;
+  return result.changes === 1;
 }
 
 // ---------- plan ----------

@@ -5,6 +5,7 @@ const DATABASE_VERSION = 1;
 
 /** Runs on every app start (SQLiteProvider onInit) and in the background task. */
 export async function migrate(db: SQLiteDatabase): Promise<void> {
+  await db.execAsync('PRAGMA busy_timeout = 5000');
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   let version = row?.user_version ?? 0;
   if (version >= DATABASE_VERSION) return;
