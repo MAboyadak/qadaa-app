@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { BACKUP_VERSION, validateBackup } from '@/domain/backup';
 import { toDayKey, type DayKey } from '@/domain/dates';
 import type { EstimatePeriod, MissedLevel } from '@/domain/estimate';
 import type { LedgerKind } from '@/domain/ledger';
@@ -286,7 +287,7 @@ export async function removeDhikrReminder(db: SQLiteDatabase, id: number) {
 
 // ---------- backup ----------
 
-const BACKUP_VERSION = 1;
+export { BackupError } from '@/domain/backup';
 const TABLES = ['profile', 'estimate_period', 'estimate_women', 'ledger', 'plan', 'reminder'] as const;
 
 export async function exportBackup(db: SQLiteDatabase): Promise<string> {
@@ -295,34 +296,19 @@ export async function exportBackup(db: SQLiteDatabase): Promise<string> {
   return JSON.stringify(data);
 }
 
-export class BackupError extends Error {}
-
 /** Replaces all data with the backup inside one transaction. Throws BackupError when invalid. */
 export async function importBackup(db: SQLiteDatabase, json: string): Promise<void> {
-  let data: Record<string, unknown>;
-  try {
-    data = JSON.parse(json);
-  } catch {
-    throw new BackupError('not json');
-  }
-  if (data?.app !== 'qadaa' || typeof data.version !== 'number' || data.version > BACKUP_VERSION) {
-    throw new BackupError('unsupported backup');
-  }
-  for (const table of TABLES) if (!Array.isArray(data[table])) throw new BackupError(`missing ${table}`);
-  const ledger = data.ledger as { prayer: unknown; delta: unknown }[];
-  if (ledger.some((r) => typeof r.prayer !== 'string' || !isPrayer(r.prayer) || typeof r.delta !== 'number')) {
-    throw new BackupError('bad ledger');
-  }
+  const data = validateBackup(json);
 
   await db.withExclusiveTransactionAsync(async (txn) => {
     for (const table of TABLES) {
       await txn.runAsync(`DELETE FROM ${table}`);
-      for (const row of data[table] as Record<string, unknown>[]) {
-        const cols = Object.keys(row).filter((c) => /^[a-z_]+$/.test(c));
-        if (cols.length === 0) continue;
+      for (const row of data[table]) {
+        const entries = Object.entries(row);
+        const cols = entries.map(([column]) => column);
         await txn.runAsync(
           `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
-          ...cols.map((c) => row[c] as string | number | null),
+          ...entries.map(([, value]) => value),
         );
       }
     }
