@@ -149,8 +149,8 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
       ledgerWriteInFlight.current = true;
       try {
         const logged = await repo.logMadeUp(db, prayer);
-        if (logged) void reschedule();
         const { profile, summary } = await refreshSnapshot();
+        if (logged && summary.remaining[prayer] === 0) void reschedule();
         const includeWitr = profile?.includeWitr ?? false;
         const after = sumCounts(summary.madeUp, includeWitr);
         const milestone = logged

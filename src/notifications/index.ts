@@ -177,13 +177,14 @@ export async function handleResponse(
   // Both the background task and the foreground listener may see the same response.
   const source = `notif:${id}`;
   const logged = await logMadeUp(db, data.prayer, source);
+  await Notifications.dismissNotificationAsync(id);
   if (logged) {
     try {
-      await rescheduleAll(db);
+      const { remaining } = await getSummary(db);
+      if (remaining[data.prayer] === 0) await rescheduleAll(db);
     } catch (e) {
       console.warn('reschedule failed', e);
     }
   }
-  await Notifications.dismissNotificationAsync(id);
   return { logged, prayerAction: true };
 }
