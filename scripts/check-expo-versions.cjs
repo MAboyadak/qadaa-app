@@ -5,7 +5,7 @@ function onlyNewerPatches(report) {
   return report.upToDate === false && Array.isArray(report.dependencies) && report.dependencies.length > 0 &&
     report.dependencies.every(({ actualVersion, expectedVersionOrRange }) => {
       const actual = /^(\d+)\.(\d+)\.(\d+)$/.exec(actualVersion);
-      const expected = /^[~^]?(\d+)\.(\d+)\.(\d+)$/.exec(expectedVersionOrRange);
+      const expected = /^[~^](\d+)\.(\d+)\.(\d+)$/.exec(expectedVersionOrRange);
       return actual && expected && actual[1] === expected[1] && actual[2] === expected[2] &&
         Number(actual[3]) < Number(expected[3]);
     });
