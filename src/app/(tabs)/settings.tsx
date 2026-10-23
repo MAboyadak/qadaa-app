@@ -62,7 +62,7 @@ export default function SettingsScreen() {
   };
 
   const setWitr = async (on: boolean) => {
-    if (on) {
+    if (on && data.summary.debt.witr === 0) {
       const counts = await estimateFromStored(db, true);
       if (counts) await setDebt(db, counts, ['witr']);
     }
