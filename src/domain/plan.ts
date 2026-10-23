@@ -61,6 +61,21 @@ export function currentStreak(byDay: Map<DayKey, number>, today: Date): number {
   return streak;
 }
 
+/** Longest run of consecutive calendar days with at least one net qada. */
+export function longestStreak(byDay: Map<DayKey, number>): number {
+  const days = [...byDay].filter(([, n]) => n > 0).map(([day]) => day).sort();
+  let longest = 0;
+  let streak = 0;
+  let previous: Date | null = null;
+  for (const day of days) {
+    const date = fromDayKey(day);
+    streak = previous !== null && diffDays(previous, date) === 1 ? streak + 1 : 1;
+    longest = Math.max(longest, streak);
+    previous = date;
+  }
+  return longest;
+}
+
 /** Days since the user stopped logging (0 if they logged today). Null if they never logged. */
 export function daysSinceLastQada(byDay: Map<DayKey, number>, today: Date): number | null {
   let last: DayKey | null = null;
