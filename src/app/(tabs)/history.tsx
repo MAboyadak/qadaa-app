@@ -20,6 +20,7 @@ export default function HistoryScreen() {
 
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         <Stat label={t('history.streak')} value={n(data.streak)} />
+        <Stat label={t('history.bestStreak')} value={n(data.bestStreak)} />
         <Stat label={t('history.totalMadeUp')} value={n(data.madeUpTotal)} />
         <Stat
           label={t('history.daysMadeUp')}
