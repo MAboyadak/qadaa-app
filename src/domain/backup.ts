@@ -53,12 +53,12 @@ const columns = {
     id: singleton,
     locale: oneOf('ar', 'en'),
     gender: nullable(text),
-    birth_date: nullable(text),
+    birth_date: nullable(day),
     puberty_age: nullable(finite),
     include_witr: flag,
     calc_method: text,
-    lat: nullable(finite),
-    lng: nullable(finite),
+    lat: nullable((v) => finite(v) && Math.abs(v as number) <= 90),
+    lng: nullable((v) => finite(v) && Math.abs(v as number) <= 180),
     location_label: nullable(text),
     minutes_per_qada_day: finite,
     nudges_enabled: flag,
@@ -152,6 +152,10 @@ export function validateBackup(json: string): ValidBackup {
 
   // A period may end before it starts: onboarding can save one when the birth date is
   // recent, and the estimate treats it as zero days. Rejecting it would refuse real exports.
+  const [profile] = result.profile;
+  if ((profile.lat === null) !== (profile.lng === null)) {
+    throw new BackupError('row', 'profile location needs both lat and lng');
+  }
   const ledgerById = new Map(result.ledger.map((row) => [row.id, row]));
   // Older app versions could record two undos of one entry (a race), so duplicates
   // must still import; rejecting them would lock users out of their own backups.
