@@ -88,6 +88,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "085854f9-c8ff-4117-b61a-a89aaf2236b0"
+      }
+    },
+    "owner": "hamdylabs"
   }
 }
