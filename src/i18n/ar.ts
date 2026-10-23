@@ -142,6 +142,7 @@ export const ar = {
   history: {
     title: 'التقدّم',
     streak: 'أيام متتالية',
+    bestStreak: 'أطول سلسلة',
     totalMadeUp: 'صلوات قُضيت',
     daysMadeUp: 'أيام قضاء كاملة',
     last12Weeks: 'آخر ١٢ أسبوعًا',

@@ -143,6 +143,7 @@ export const en: Strings = {
   history: {
     title: 'Progress',
     streak: 'Day streak',
+    bestStreak: 'Best streak',
     totalMadeUp: 'Prayers made up',
     daysMadeUp: 'Full make-up days',
     last12Weeks: 'Last 12 weeks',
