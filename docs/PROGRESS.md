@@ -18,14 +18,15 @@
 - `npm run typecheck`: clean
 - `npm run lint`: clean
 - `npx expo export --platform android`: bundles successfully
-- `npx expo-doctor`: all checks pass
+- `npx expo-doctor`: only warns that 14 Expo packages have newer SDK 58 patch versions (`npx expo install --fix`, then retest)
+- GitHub Actions (`.github/workflows/ci.yml`) runs all of the above on every push/PR and builds the APK on `main`
 
 ## Needs you (blockers)
 1. **Google Play developer account** ($25) and the 12-tester closed test (14 days).
 2. **Scholar review** of `docs/fiqh-rules.md` ⚠ items, `src/content/adhkar.json` and `src/content/hope.json` (all marked `reviewed: false`).
 3. **Contact email** for the privacy policy (`docs/store/privacy-policy.md`) and a public URL to host it.
 4. **Confirm the app name and package id** (`com.qadaa.prayers`). The package can't change after the first upload.
-5. **Git identity:** commits use your global git email (work address). For a personal project you may want `git config user.email <personal>` in this repo.
+5. ~~Git identity~~: done, this repo commits with your personal email.
 6. **Expo account** (free), only if you want cloud builds via EAS instead of local Gradle builds.
 
 ## Verified on the emulator (Pixel 7, Android 16 / API 36)
