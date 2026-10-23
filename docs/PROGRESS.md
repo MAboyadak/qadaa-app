@@ -19,7 +19,7 @@
 - `npm run lint`: clean
 - `npx expo export --platform android`: bundles successfully
 - `npx expo-doctor`: only warns that 14 Expo packages have newer SDK 58 patch versions (`npx expo install --fix`, then retest)
-- GitHub Actions (`.github/workflows/ci.yml`) runs all of the above on every push/PR and builds the APK on `main`
+- GitHub Actions (`.github/workflows/ci.yml`) runs all of the above on pull requests, pushes to `main`, `v*` tags and manual runs; APK builds run on `main`, tags and manual runs
 
 ## Needs you (blockers)
 1. **Google Play developer account** ($25) and the 12-tester closed test (14 days).
