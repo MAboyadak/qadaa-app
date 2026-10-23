@@ -121,14 +121,15 @@ async function writeEstimateInputs(db: SQLiteDatabase, periods: EstimatePeriod[]
   }
 }
 
-/** Saves the inputs, estimate debt and associated profile fields as one unit. */
+/** Saves the estimate and profile, plus an optional initial plan, as one unit. */
 export async function saveEstimate(
   db: SQLiteDatabase,
   periods: EstimatePeriod[],
   women: WomenInputs | null,
   counts: PrayerCounts,
   prayers: Prayer[],
-  profile: Pick<Profile, 'gender' | 'birthDate' | 'pubertyAge' | 'includeWitr' | 'locale'>,
+  profile: Pick<Profile, 'gender' | 'birthDate' | 'pubertyAge' | 'includeWitr' | 'locale'> & Partial<Profile>,
+  pace?: Pace,
 ): Promise<void> {
   await db.withTransactionAsync(async () => {
     await writeEstimateInputs(db, periods, women);
@@ -141,6 +142,7 @@ export async function saveEstimate(
       nifasDaysTotal: women?.nifasDaysTotal,
     }).witr;
     await writeDebt(db, { ...counts, witr }, prayers.includes('witr') ? prayers : [...prayers, 'witr']);
+    if (pace) await writePlan(db, pace);
     await updateProfile(db, profile);
   });
 }
@@ -310,15 +312,17 @@ export async function getPlan(db: SQLiteDatabase): Promise<Pace | null> {
 }
 
 export async function setPlan(db: SQLiteDatabase, pace: Pace): Promise<void> {
-  await db.withTransactionAsync(async () => {
-    await db.runAsync('UPDATE plan SET active = 0 WHERE active = 1');
-    await db.runAsync(
-      'INSERT INTO plan (pace_type, pace_value, started_at, active) VALUES (?, ?, ?, 1)',
-      pace.type,
-      pace.value,
-      new Date().toISOString(),
-    );
-  });
+  await db.withTransactionAsync(() => writePlan(db, pace));
+}
+
+async function writePlan(db: SQLiteDatabase, pace: Pace): Promise<void> {
+  await db.runAsync('UPDATE plan SET active = 0 WHERE active = 1');
+  await db.runAsync(
+    'INSERT INTO plan (pace_type, pace_value, started_at, active) VALUES (?, ?, ?, 1)',
+    pace.type,
+    pace.value,
+    new Date().toISOString(),
+  );
 }
 
 // ---------- dhikr reminders ----------

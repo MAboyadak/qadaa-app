@@ -9,7 +9,7 @@ import { LocationPicker, locationLabel, type PickedLocation } from '@/components
 import { PacePicker } from '@/components/pace-picker';
 import { useToast } from '@/components/toast';
 import { AppText, Button, Card, Icon, Screen, Segmented, Stepper, SwitchRow } from '@/components/ui';
-import { BackupError, getEstimateInputs, saveEstimate, setPlan } from '@/db/repo';
+import { BackupError, getEstimateInputs, saveEstimate } from '@/db/repo';
 import { addYears, fromDayKey } from '@/domain/dates';
 import { estimateMissed, newEstimatePeriod, overlappingPeriods, periodDateBounds, MISSED_LEVELS, type EstimatePeriod, type MissedLevel } from '@/domain/estimate';
 import type { Pace } from '@/domain/plan';
@@ -108,30 +108,32 @@ export default function Onboarding() {
   const finish = async () => {
     if (!counts || overlappingPeriods(effectivePeriods)) return;
     setSaving(true);
-    const prayers = activePrayers(includeWitr);
-    await saveEstimate(db, effectivePeriods, gender === 'f' ? { avgCycleDays: cycleDays, nifasDaysTotal: nifasDays } : null, counts, prayers, { gender, birthDate: dayKey(birthDate), pubertyAge, includeWitr, locale });
-    await data.refresh();
-    if (reestimate) {
+    try {
+      // Resolve the OS prompt before beginning any onboarding writes.
+      const granted = !reestimate && notify ? await requestPermission() : false;
+      await saveEstimate(
+        db,
+        effectivePeriods,
+        gender === 'f' ? { avgCycleDays: cycleDays, nifasDaysTotal: nifasDays } : null,
+        counts,
+        activePrayers(includeWitr),
+        {
+          gender, birthDate: dayKey(birthDate), pubertyAge, includeWitr, locale,
+          ...(!reestimate ? {
+            nudgesEnabled: granted,
+            ...(place ? { lat: place.lat, lng: place.lng, locationLabel: place.label, calcMethod: place.method } : {}),
+            onboardedAt: new Date().toISOString(),
+          } : {}),
+        },
+        reestimate ? undefined : pace,
+      );
+      await data.refresh();
       await data.reschedule();
-      router.back();
-      return;
+      if (reestimate) router.back();
+      else router.replace('/');
+    } finally {
+      setSaving(false);
     }
-    await setPlan(db, pace);
-    const granted = notify ? await requestPermission() : false;
-    await data.updateProfile(
-      {
-        locale,
-        gender,
-        birthDate: dayKey(birthDate),
-        pubertyAge,
-        includeWitr,
-        nudgesEnabled: granted,
-        ...(place ? { lat: place.lat, lng: place.lng, locationLabel: place.label, calcMethod: place.method } : {}),
-        onboardedAt: new Date().toISOString(),
-      },
-      { reschedule: true },
-    );
-    router.replace('/');
   };
 
   const restore = async () => {
