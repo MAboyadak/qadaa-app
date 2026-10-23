@@ -15,7 +15,7 @@ Read `docs/PRD.md`, `docs/fiqh-rules.md` and `docs/data-model.md` before working
 - **Fiqh:** never invent religious rulings or adhkar text. Rules come only from `docs/fiqh-rules.md`. Dhikr and hope content comes only from `src/content/*.json` with a source. If something isn't covered, ask.
 - **Tone:** gentle and hopeful; never shaming, no red "failure" states.
 - **Ledger:** prayer counts change only by appending to `ledger` (never UPDATE/DELETE rows). Undo = a compensating entry.
-- Domain logic (estimate, ledger maths, plan projection) lives in pure TS modules under `src/domain/` with Jest tests.
+- Estimate and plan maths live in pure TS modules under `src/domain/` with Jest tests. Ledger aggregates are computed in SQL in `src/db/repo.ts` and tested against real SQLite.
 - RTL: use logical styles (`start`/`end`, `marginStart`), never `left`/`right`.
 - Use design tokens from `src/theme/` for all colors, spacing and type; no raw hex in components.
 

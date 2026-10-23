@@ -183,14 +183,21 @@ export async function getSummary(db: SQLiteDatabase): Promise<PrayerSummary> {
   return summary;
 }
 
-export async function getMadeUpByDay(db: SQLiteDatabase, sinceDay?: DayKey): Promise<Map<DayKey, number>> {
+export async function getMadeUpByDay(
+  db: SQLiteDatabase,
+  prayers: readonly Prayer[],
+  sinceDay?: DayKey,
+): Promise<Map<DayKey, number>> {
+  if (prayers.length === 0) return new Map();
   const rows = await db.getAllAsync<{ day: string; n: number }>(
     `SELECT CASE WHEN l.kind = 'undo' THEN COALESCE(r.day, l.day) ELSE l.day END AS day,
        SUM(-l.delta) AS n
      FROM ledger l LEFT JOIN ledger r ON r.id = l.ref_id
      WHERE l.kind IN ('made_up','undo')
+       AND l.prayer IN (${prayers.map(() => '?').join(', ')})
        AND (CASE WHEN l.kind = 'undo' THEN COALESCE(r.day, l.day) ELSE l.day END) >= ?
      GROUP BY 1`,
+    ...prayers,
     sinceDay ?? '0000-00-00',
   );
   return new Map(rows.map((r) => [r.day, r.n]));
@@ -211,10 +218,16 @@ export async function setDebt(db: SQLiteDatabase, target: PrayerCounts, prayers:
 /** Sets what remains for each prayer by appending adjustments. */
 export async function setRemaining(db: SQLiteDatabase, target: Partial<PrayerCounts>): Promise<void> {
   await db.withTransactionAsync(async () => {
-    const { remaining } = await getSummary(db);
     for (const [p, value] of Object.entries(target) as [Prayer, number][]) {
-      const delta = Math.max(0, Math.round(value)) - remaining[p];
-      if (delta !== 0) await append(db, p, delta, 'adjust');
+      const requested = Math.max(0, Math.round(value));
+      const now = new Date();
+      await db.runAsync(
+        `INSERT INTO ledger (prayer, delta, kind, ref_id, source, day, created_at)
+         SELECT ?, ? - balance, 'adjust', NULL, 'app', ?, ?
+         FROM (SELECT COALESCE(SUM(delta), 0) AS balance FROM ledger WHERE prayer = ?)
+         WHERE MAX(0, balance) != ?`,
+        p, requested, toDayKey(now), now.toISOString(), p, requested,
+      );
     }
   });
 }
