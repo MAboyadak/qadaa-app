@@ -40,3 +40,4 @@ Choices made during autonomous development. Each can be revisited; the "Why" is 
 | 34 | Below 0.1% progress, Home shows "made up N so far" instead of "0%" | 0% after real effort is discouraging (tone rule). |
 | 35 | Launch video in Remotion (`video/`), 4:5, silent with bilingual captions | Code-driven, so it's easy to re-render when screens change; 4:5 suits the LinkedIn feed. |
 | 36 | Store screenshots are framed 1080×1920 images with Arabic headlines | Raw 1080×2400 captures exceed Play's 2:1 aspect limit. |
+| 37 | Ledger aggregates use SQL in `src/db/repo.ts`, tested against real SQLite; estimate and plan maths stay pure TypeScript | Keep one ledger implementation, tested where it runs, instead of testing unused pure functions. |

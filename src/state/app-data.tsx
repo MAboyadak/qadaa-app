@@ -66,11 +66,11 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
   } | null>(null);
 
   const refreshSnapshot = useCallback(async () => {
-    const [profile, summary, plan, byDay, dhikr] = await Promise.all([
-      repo.getProfile(db),
+    const profile = await repo.getProfile(db);
+    const [summary, plan, byDay, dhikr] = await Promise.all([
       repo.getSummary(db),
       repo.getPlan(db),
-      repo.getMadeUpByDay(db),
+      repo.getMadeUpByDay(db, activePrayers(profile?.includeWitr ?? false)),
       repo.getDhikrReminders(db),
     ]);
     setState({ profile, summary, plan, byDay, dhikr, today: new Date() });

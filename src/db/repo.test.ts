@@ -1,9 +1,10 @@
 import type { NotificationResponse } from 'expo-notifications';
 import * as Notifications from 'expo-notifications';
 
-import { getMadeUpByDay, logMadeUp, undoLast } from './repo';
+import { getMadeUpByDay, getSummary, logMadeUp, setDebt, setRemaining, undoLast } from './repo';
 import { migrate } from './schema';
 import { createTestDb } from './test-db';
+import { activePrayers, ALL_PRAYERS, emptyCounts, sumCounts } from '../domain/prayers';
 import { ACTION_DONE, ACTION_LATER, CATEGORY_QADA, handleResponse, sendTestNudge } from '../notifications';
 
 jest.mock('expo-notifications', () => ({
@@ -43,6 +44,101 @@ describe('atomic ledger writes (real SQLite)', () => {
   }
   const rows = (kind: string) => db.getAllAsync('SELECT * FROM ledger WHERE kind = ?', kind);
 
+  it('aggregates remaining, total debt and net made-up counts from the ledger', async () => {
+    await seed(10);
+    await setRemaining(db, { fajr: 12 });
+    await logMadeUp(db, 'fajr', 'app', originalDay);
+    await logMadeUp(db, 'fajr', 'app', originalDay);
+    await undoLast(db, 'fajr', undoDay);
+
+    const summary = await getSummary(db);
+    expect(summary.remaining).toEqual({ ...emptyCounts(), fajr: 11 });
+    expect(sumCounts(summary.debt, true)).toBe(12);
+    expect(sumCounts(summary.madeUp, true)).toBe(1);
+    expect(await getMadeUpByDay(db, ALL_PRAYERS)).toEqual(new Map([['2026-10-20', 1]]));
+  });
+
+  it.each([5, 12])('sets remaining exactly after re-estimating debt to %i', async (debt) => {
+    await seed(10);
+    for (let i = 0; i < 8; i++) await logMadeUp(db, 'fajr', 'app', originalDay);
+    await setDebt(db, { ...emptyCounts(), fajr: debt }, ['fajr']);
+    const before = await db.getAllAsync('SELECT * FROM ledger ORDER BY id');
+    expect((await getSummary(db)).remaining.fajr).toBe(Math.max(0, debt - 8));
+    expect(await db.getFirstAsync('SELECT SUM(delta) AS balance FROM ledger')).toEqual({ balance: debt - 8 });
+
+    await setRemaining(db, { fajr: 2 });
+    const after = await db.getAllAsync('SELECT * FROM ledger ORDER BY id');
+    expect(after.slice(0, before.length)).toEqual(before);
+    expect(after).toHaveLength(before.length + 1);
+    expect(after[after.length - 1]).toEqual(expect.objectContaining({ kind: 'adjust', delta: 2 - (debt - 8) }));
+    expect((await getSummary(db)).remaining.fajr).toBe(2);
+    expect((await getSummary(db)).madeUp.fajr).toBe(8);
+    expect(await db.getFirstAsync('SELECT SUM(delta) AS balance FROM ledger')).toEqual({ balance: 2 });
+  });
+
+  it('appends nothing when setting remaining to its current value', async () => {
+    await seed(10);
+    await logMadeUp(db, 'fajr');
+    const before = await db.getAllAsync('SELECT * FROM ledger');
+    await setRemaining(db, { fajr: 9, dhuhr: 0 });
+    expect(await db.getAllAsync('SELECT * FROM ledger')).toEqual(before);
+  });
+
+  it('appends nothing when the current displayed remaining is clamped to zero', async () => {
+    await seed(2);
+    await logMadeUp(db, 'fajr');
+    await logMadeUp(db, 'fajr');
+    await setDebt(db, { ...emptyCounts(), fajr: 1 }, ['fajr']);
+    const before = await db.getAllAsync('SELECT * FROM ledger');
+    expect((await getSummary(db)).remaining.fajr).toBe(0);
+    await setRemaining(db, { fajr: 0 });
+    expect(await db.getAllAsync('SELECT * FROM ledger')).toEqual(before);
+  });
+
+  it('sets multiple prayers independently and rounds and clamps requested counts', async () => {
+    await seed(10);
+    await seed(5, 'asr');
+    await setRemaining(db, { fajr: 2.6, asr: -2, dhuhr: 4 });
+    expect((await getSummary(db)).remaining).toEqual({ ...emptyCounts(), fajr: 3, dhuhr: 4 });
+  });
+
+  it('undoes the latest eligible row, then the previous one, and stops when none remain', async () => {
+    await seed(10);
+    expect(await undoLast(db, 'fajr')).toBe(false);
+    await logMadeUp(db, 'fajr', 'app', originalDay);
+    await logMadeUp(db, 'fajr', 'app', originalDay);
+    const made = await db.getAllAsync<{ id: number }>("SELECT id FROM ledger WHERE kind = 'made_up' ORDER BY id");
+    expect(await undoLast(db, 'dhuhr')).toBe(false);
+    expect(await undoLast(db, 'fajr', undoDay)).toBe(true);
+    expect(await rows('undo')).toEqual([expect.objectContaining({ ref_id: made[1].id })]);
+    expect(await undoLast(db, 'fajr', undoDay)).toBe(true);
+    expect(await undoLast(db, 'fajr', undoDay)).toBe(false);
+    expect(await rows('undo')).toEqual([
+      expect.objectContaining({ ref_id: made[1].id }),
+      expect.objectContaining({ ref_id: made[0].id }),
+    ]);
+    const summary = await getSummary(db);
+    expect(summary.remaining.fajr).toBe(10);
+    expect(summary.debt.fajr).toBe(10);
+    expect(summary.madeUp.fajr).toBe(0);
+  });
+
+  it('filters Witr make-ups and undos using the active prayers without losing history', async () => {
+    await seed(3, 'witr');
+    await seed(1);
+    await logMadeUp(db, 'witr', 'app', originalDay);
+    await logMadeUp(db, 'witr', 'app', originalDay);
+    await undoLast(db, 'witr', undoDay);
+    await logMadeUp(db, 'witr', 'app', undoDay);
+    await logMadeUp(db, 'fajr', 'app', undoDay);
+    expect(await getMadeUpByDay(db, activePrayers(false))).toEqual(new Map([['2026-10-23', 1]]));
+    expect(await getMadeUpByDay(db, activePrayers(true))).toEqual(new Map([
+      ['2026-10-20', 1], ['2026-10-23', 2],
+    ]));
+    expect(await getMadeUpByDay(db, activePrayers(true), '2026-10-21')).toEqual(new Map([['2026-10-23', 2]]));
+    expect(await getMadeUpByDay(db, [])).toEqual(new Map());
+  });
+
   it('logs exactly once when overlapping calls compete for the last prayer', async () => {
     await seed();
     expect(await Promise.all([logMadeUp(db, 'fajr'), logMadeUp(db, 'fajr')])).toEqual([true, false]);
@@ -75,7 +171,7 @@ describe('atomic ledger writes (real SQLite)', () => {
     expect(await rows('undo')).toEqual([
       expect.objectContaining({ day: '2026-10-20', created_at: undoDay.toISOString() }),
     ]);
-    const history = await getMadeUpByDay(db);
+    const history = await getMadeUpByDay(db, ALL_PRAYERS);
     expect(history.get('2026-10-20')).toBe(0);
     expect(history.get('2026-10-23') ?? 0).toBe(0);
   });
@@ -88,8 +184,8 @@ describe('atomic ledger writes (real SQLite)', () => {
        SELECT prayer, 1, 'undo', id, 'app', '2026-10-23', ? FROM ledger WHERE kind = 'made_up'`,
       undoDay.toISOString(),
     );
-    expect(await getMadeUpByDay(db)).toEqual(new Map([['2026-10-20', 0]]));
-    expect(await getMadeUpByDay(db, '2026-10-21')).toEqual(new Map());
+    expect(await getMadeUpByDay(db, ALL_PRAYERS)).toEqual(new Map([['2026-10-20', 0]]));
+    expect(await getMadeUpByDay(db, ALL_PRAYERS, '2026-10-21')).toEqual(new Map());
   });
 
   it('falls back to the undo day when its reference is missing', async () => {
@@ -98,7 +194,7 @@ describe('atomic ledger writes (real SQLite)', () => {
        VALUES ('fajr', 1, 'undo', NULL, '2026-10-23', ?)`,
       undoDay.toISOString(),
     );
-    expect(await getMadeUpByDay(db, '2026-10-23')).toEqual(new Map([['2026-10-23', -1]]));
+    expect(await getMadeUpByDay(db, ALL_PRAYERS, '2026-10-23')).toEqual(new Map([['2026-10-23', -1]]));
   });
 
   it('can log again after undo without replaying a handled notification', async () => {
