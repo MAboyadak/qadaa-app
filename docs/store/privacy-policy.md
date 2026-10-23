@@ -27,4 +27,4 @@ If you export a backup, the app creates a file and opens your phone's share shee
 The app does not knowingly collect any personal data from anyone, including children.
 
 ## Contact
-For questions: [CONTACT EMAIL — set before publishing]
+For questions: mohamedhamdy9711@gmail.com
