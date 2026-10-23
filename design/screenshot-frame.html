@@ -1,0 +1,22 @@
+<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>
+/* Store screenshot frame: 1080x1920, headline + phone. Render with headless Chrome; set the
+   query string ?img=<data-uri or path>&h=<headline>&s=<subtitle>. */
+@font-face{font-family:Plex;src:url('../node_modules/@expo-google-fonts/ibm-plex-sans-arabic/700Bold/IBMPlexSansArabic_700Bold.ttf');font-weight:700}
+@font-face{font-family:Plex;src:url('../node_modules/@expo-google-fonts/ibm-plex-sans-arabic/500Medium/IBMPlexSansArabic_500Medium.ttf');font-weight:500}
+html,body{margin:0;width:1080px;height:1920px;overflow:hidden}
+body{font-family:Plex;color:#F7F3EC;text-align:center;
+background:linear-gradient(160deg,#0F5E55 0%,#145C50 55%,#2E6E55 100%);
+background-image:radial-gradient(circle at 85% 8%,rgba(224,190,90,.18),transparent 40%),linear-gradient(160deg,#0F5E55 0%,#145C50 55%,#2E6E55 100%)}
+h1{font-size:92px;margin:110px 0 0;color:#F3E3B0;line-height:1.25}
+p{font-size:44px;margin:24px 60px 0;font-weight:500;line-height:1.5;opacity:.92}
+.phone{position:absolute;left:138px;top:560px;width:804px;border-radius:72px;background:#151515;padding:22px;box-sizing:border-box;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.phone img{display:block;width:100%;border-radius:52px}
+</style></head><body>
+<h1 id="h"></h1><p id="s"></p>
+<div class="phone"><img id="i"></div>
+<script>
+const q=new URLSearchParams(location.search);
+document.getElementById('h').textContent=q.get('h');
+document.getElementById('s').textContent=q.get('s');
+document.getElementById('i').src=q.get('img');
+</script></body></html>
