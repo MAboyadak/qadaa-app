@@ -1,4 +1,4 @@
-import { estimateMissed } from './estimate';
+import { estimateMissed, overlappingPeriods, type EstimatePeriod } from './estimate';
 
 const d = (s: string) => new Date(`${s}T12:00:00`);
 
@@ -78,5 +78,30 @@ describe('estimateMissed', () => {
       periods: [{ start: d('2020-02-01'), end: d('2020-01-01'), level: 'all' }],
     });
     expect(counts.fajr).toBe(0);
+  });
+});
+
+
+describe('overlappingPeriods', () => {
+  const period = (start: string, end: string): EstimatePeriod => ({ start: d(start), end: d(end), level: 'all' });
+  it('allows empty lists and separate ranges in any order', () => {
+    expect(overlappingPeriods([])).toBe(false);
+    expect(overlappingPeriods([period('2021-01-01', '2021-01-10'), period('2020-01-01', '2020-12-31')])).toBe(false);
+  });
+  it('detects a shared calendar day regardless of time', () => {
+    const a = period('2020-01-01', '2020-01-10');
+    a.end.setHours(0);
+    const b = period('2020-01-10', '2020-01-20');
+    b.start.setHours(23);
+    expect(overlappingPeriods([a, b])).toBe(true);
+  });
+  it('detects contained, identical and partially overlapping ranges', () => {
+    const a = period('2020-01-01', '2020-01-10');
+    for (const b of [a, period('2020-01-03', '2020-01-04'), period('2020-01-05', '2020-01-20')]) {
+      expect(overlappingPeriods([b, a])).toBe(true);
+    }
+  });
+  it('ignores reversed periods even inside another range', () => {
+    expect(overlappingPeriods([period('2020-01-01', '2020-01-20'), period('2020-01-10', '2020-01-05')])).toBe(false);
   });
 });

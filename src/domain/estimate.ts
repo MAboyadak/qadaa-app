@@ -1,4 +1,4 @@
-import { inclusiveDays } from './dates';
+import { diffDays, inclusiveDays } from './dates';
 import { activePrayers, emptyCounts, type Prayer, type PrayerCounts } from './prayers';
 
 /** How much of a period's prayers were missed. */
@@ -21,6 +21,14 @@ export interface EstimateInput {
   avgCycleDays?: number;
   /** Women only: total days of nifas across all births (no qada for them). */
   nifasDaysTotal?: number;
+}
+
+/** Inclusive local-day ranges overlap even when they share only one day. */
+export function overlappingPeriods(periods: EstimatePeriod[]): boolean {
+  const valid = periods.filter((p) => inclusiveDays(p.start, p.end) > 0);
+  return valid.some((a, i) => valid.slice(i + 1).some((b) =>
+    diffDays(a.start, b.end) >= 0 && diffDays(b.start, a.end) >= 0,
+  ));
 }
 
 const AVG_MONTH_DAYS = 30;
