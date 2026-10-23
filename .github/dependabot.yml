@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # npm dependencies are upgraded with `npx expo install --fix` to stay on SDK-compatible versions.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
