@@ -14,9 +14,13 @@ export const BACKGROUND_NOTIFICATION_TASK = 'qadaa-notification-response';
 
 TaskManager.defineTask<Notifications.NotificationTaskPayload>(BACKGROUND_NOTIFICATION_TASK, async ({ data }) => {
   if (!data || !('actionIdentifier' in data)) return;
-  const db = await openDatabaseAsync(DATABASE_NAME);
-  await migrate(db);
-  await handleResponse(db, data);
+  const db = await openDatabaseAsync(DATABASE_NAME, { useNewConnection: true });
+  try {
+    await migrate(db);
+    await handleResponse(db, data);
+  } finally {
+    await db.closeAsync();
+  }
 });
 
 Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch(() => {

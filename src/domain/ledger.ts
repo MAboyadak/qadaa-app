@@ -29,12 +29,14 @@ export function totalDebt(entries: LedgerEntry[]): number {
     .reduce((acc, e) => acc + e.delta, 0);
 }
 
-/** Net prayers made up per day (an undo cancels on the day it happens). */
+/** Net prayers made up per day; undo uses its referenced row's day, or its own if missing. */
 export function madeUpByDay(entries: LedgerEntry[]): Map<DayKey, number> {
   const byDay = new Map<DayKey, number>();
+  const byId = new Map(entries.map((e) => [e.id, e]));
   for (const e of entries) {
     if (e.kind !== 'made_up' && e.kind !== 'undo') continue;
-    byDay.set(e.day, (byDay.get(e.day) ?? 0) - e.delta);
+    const day = e.kind === 'undo' ? (byId.get(e.refId ?? -1)?.day ?? e.day) : e.day;
+    byDay.set(day, (byDay.get(day) ?? 0) - e.delta);
   }
   return byDay;
 }
