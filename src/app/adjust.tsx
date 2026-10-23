@@ -21,6 +21,7 @@ export default function AdjustScreen() {
     const patch = Object.fromEntries(data.prayers.map((p) => [p, values[p]]));
     await setRemaining(db, patch);
     await data.refresh();
+    await data.reschedule();
     router.back();
   };
 

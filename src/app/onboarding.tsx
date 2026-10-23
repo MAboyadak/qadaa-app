@@ -112,6 +112,7 @@ export default function Onboarding() {
     await saveEstimate(db, effectivePeriods, gender === 'f' ? { avgCycleDays: cycleDays, nifasDaysTotal: nifasDays } : null, counts, prayers, { gender, birthDate: dayKey(birthDate), pubertyAge, includeWitr, locale });
     await data.refresh();
     if (reestimate) {
+      await data.reschedule();
       router.back();
       return;
     }
