@@ -3,6 +3,7 @@ import {
   currentStreak,
   dailyTarget,
   daysSinceLastQada,
+  longestStreak,
   projectedFinish,
   qadaDaysPerDay,
   splitDuration,
@@ -44,6 +45,60 @@ describe('plan', () => {
     expect(currentStreak(byDay, today)).toBe(2);
     byDay.set('2026-10-16', 1);
     expect(currentStreak(byDay, today)).toBe(3);
+  });
+
+  it('returns zero for an empty best streak', () => {
+    expect(longestStreak(new Map())).toBe(0);
+  });
+
+  it('counts a single day as the best streak', () => {
+    expect(longestStreak(new Map([['2026-10-12', 3]]))).toBe(1);
+  });
+
+  it('ignores zero and negative days when finding the best streak', () => {
+    const byDay = new Map([
+      ['2026-10-10', 1],
+      ['2026-10-11', 0],
+      ['2026-10-12', 2],
+      ['2026-10-13', -1],
+      ['2026-10-14', 1],
+    ]);
+    expect(longestStreak(byDay)).toBe(1);
+    expect(longestStreak(new Map([['2026-10-11', 0], ['2026-10-13', -1]]))).toBe(0);
+  });
+
+  it('picks the earlier, longer run across several runs', () => {
+    const byDay = new Map([
+      ['2026-10-01', 1],
+      ['2026-10-02', 2],
+      ['2026-10-03', 1],
+      ['2026-10-06', 1],
+      ['2026-10-07', 1],
+      ['2026-10-10', 1],
+    ]);
+    expect(longestStreak(byDay)).toBe(3);
+  });
+
+  it('counts a best streak across month and year boundaries', () => {
+    const byDay = new Map([
+      ['2026-12-30', 1],
+      ['2026-12-31', 1],
+      ['2027-01-01', 2],
+      ['2027-01-02', 1],
+    ]);
+    expect(longestStreak(byDay)).toBe(4);
+  });
+
+  it('finds the best streak without changing unordered map entries', () => {
+    const byDay = new Map([
+      ['2026-03-09', 1],
+      ['2026-03-07', 2],
+      ['2026-03-12', 1],
+      ['2026-03-08', 1],
+    ]);
+    const entries = [...byDay];
+    expect(longestStreak(byDay)).toBe(3);
+    expect([...byDay]).toEqual(entries);
   });
 
   it('computes days since the last qada', () => {
