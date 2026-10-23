@@ -102,6 +102,31 @@ describe('atomic ledger writes (real SQLite)', () => {
     expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
   });
 
+  it.each(['undo', 're-estimate', 'adjust'] as const)(
+    'restores reminders after %s makes a finished prayer remaining again',
+    async (action) => {
+      await seed(1);
+      await updateProfile(db, { onboardedAt: originalDay.toISOString(), locale: 'en', nudgesEnabled: true, lat: 30, lng: 31 });
+      await logMadeUp(db, 'fajr', 'app', originalDay);
+      expect(await rescheduleAll(db, originalDay)).toBe(0);
+
+      if (action === 'undo') {
+        expect(await undoLast(db, 'fajr', undoDay)).toBe(true);
+      } else if (action === 're-estimate') {
+        await saveEstimate(db, [{ start: originalDay, end: undoDay, level: 'half' }], null,
+          { ...emptyCounts(), fajr: 2 }, ['fajr'],
+          { gender: 'm', birthDate: '1990-01-01', pubertyAge: 14, includeWitr: false, locale: 'en' });
+      } else {
+        await setRemaining(db, { fajr: 1 });
+      }
+
+      expect((await getSummary(db)).remaining.fajr).toBe(1);
+      expect(await rescheduleAll(db, originalDay)).toBeGreaterThan(0);
+      const calls = jest.mocked(Notifications.scheduleNotificationAsync).mock.calls;
+      expect(calls.every(([request]) => request.content.data?.prayer === 'fajr')).toBe(true);
+    },
+  );
+
   it('runs overlapping reschedules one after another, never interleaved', async () => {
     await seed(1);
     await updateProfile(db, { onboardedAt: originalDay.toISOString(), locale: 'en', nudgesEnabled: true, lat: 30, lng: 31 });

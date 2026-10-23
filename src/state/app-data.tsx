@@ -170,13 +170,14 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
       ledgerWriteInFlight.current = true;
       try {
         const ok = await repo.undoLast(db, prayer);
+        if (ok) void reschedule();
         await refresh();
         return ok;
       } finally {
         ledgerWriteInFlight.current = false;
       }
     },
-    [db, refresh],
+    [db, refresh, reschedule],
   );
 
   const setPace = useCallback(
