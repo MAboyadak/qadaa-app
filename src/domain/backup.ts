@@ -15,7 +15,8 @@ type ColumnCheck = (value: unknown) => boolean;
 const text: ColumnCheck = (v) => typeof v === 'string';
 const nonEmptyText: ColumnCheck = (v) => typeof v === 'string' && v.trim().length > 0;
 const finite: ColumnCheck = (v) => typeof v === 'number' && Number.isFinite(v);
-const integer: ColumnCheck = (v) => typeof v === 'number' && Number.isInteger(v);
+// Safe integers only: larger values lose precision in JS or fail SQLite's INTEGER binding mid-import.
+const integer: ColumnCheck = (v) => typeof v === 'number' && Number.isSafeInteger(v);
 const flag: ColumnCheck = (v) => v === 0 || v === 1;
 const singleton: ColumnCheck = (v) => v === 1;
 const nullable = (check: ColumnCheck): ColumnCheck => (v) => v === null || check(v);
