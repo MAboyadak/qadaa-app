@@ -133,11 +133,8 @@ export function validateBackup(json: string): ValidBackup {
     Object.assign(result, { [table]: validated });
   }
 
-  for (const row of result.estimate_period) {
-    if ((row.start_date as string) > (row.end_date as string)) {
-      throw new BackupError('row', 'estimate period ends before it starts');
-    }
-  }
+  // A period may end before it starts: onboarding can save one when the birth date is
+  // recent, and the estimate treats it as zero days. Rejecting it would refuse real exports.
   const ledgerById = new Map(result.ledger.map((row) => [row.id, row]));
   // Older app versions could record two undos of one entry (a race), so duplicates
   // must still import; rejecting them would lock users out of their own backups.

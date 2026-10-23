@@ -46,6 +46,12 @@ describe('validateBackup', () => {
     expect(validateBackup(JSON.stringify(backup)).ledger).toHaveLength(backup.ledger.length);
   });
 
+  it('accepts a period that ends before it starts, as onboarding can save one', () => {
+    const backup = validBackup();
+    backup.estimate_period[0].start_date = '2026-01-01';
+    expect(validateBackup(JSON.stringify(backup)).estimate_period).toEqual(backup.estimate_period);
+  });
+
   it('allows empty optional tables', () => {
     const backup = validBackup();
     backup.estimate_period = [];
@@ -98,7 +104,6 @@ describe('validateBackup', () => {
     ['non-leap February 29', (b) => { b.ledger[0].day = '2025-02-29'; }, 'row'],
     ['unformatted day', (b) => { b.ledger[0].day = '2026-2-01'; }, 'row'],
     ['invalid start date', (b) => { b.estimate_period[0].start_date = '2026-13-01'; }, 'row'],
-    ['reversed period', (b) => { b.estimate_period[0].start_date = '2026-01-01'; }, 'row'],
     ['empty level', (b) => { b.estimate_period[0].level = ' '; }, 'row'],
     ['unknown prayer', (b) => { b.ledger[0].prayer = 'unknown'; }, 'row'],
     ['unknown kind', (b) => { b.ledger[0].kind = 'unknown'; }, 'row'],
