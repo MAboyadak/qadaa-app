@@ -18,6 +18,7 @@
     "android": {
       "package": "com.qadaa.prayers",
       "versionCode": 1,
+      "allowBackup": false,
       "adaptiveIcon": {
         "backgroundColor": "#0F5E55",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

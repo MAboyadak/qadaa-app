@@ -12,7 +12,7 @@ Qadaa is a free app, offered as sadaqah jariyah, that helps you estimate, plan a
 - Your progress log (each make-up prayer you record).
 - Your settings (language, pace, reminder times, chosen city or approximate location).
 
-This data is kept in a local database inside the app. It is never sent anywhere. Uninstalling the app deletes it.
+This data is kept in a local database inside the app. It is never sent anywhere, and the app opts out of Android's automatic cloud backup. Uninstalling the app deletes it.
 
 ## Location
 If you choose "Use my location", the app reads your **approximate** location once to calculate prayer times on your device. The location is stored only on your device and is never transmitted. You can choose a city from a list instead.
