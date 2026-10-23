@@ -1,7 +1,7 @@
 import type { NotificationResponse } from 'expo-notifications';
 import * as Notifications from 'expo-notifications';
 
-import { getMadeUpByDay, getEstimateInputs, getProfile, getSummary, saveEstimate, updateProfile, logMadeUp, setDebt, setRemaining, undoLast } from './repo';
+import { getMadeUpByDay, getEstimateInputs, getPlan, getProfile, getSummary, saveEstimate, updateProfile, logMadeUp, setDebt, setRemaining, undoLast } from './repo';
 import { migrate } from './schema';
 import { createTestDb } from './test-db';
 import { activePrayers, ALL_PRAYERS, emptyCounts, sumCounts } from '../domain/prayers';
@@ -72,6 +72,37 @@ describe('atomic ledger writes (real SQLite)', () => {
     expect(await getEstimateInputs(db)).toEqual(inputs);
     expect(await db.getAllAsync('SELECT * FROM ledger ORDER BY id')).toEqual(ledger);
     expect(await getProfile(db)).toMatchObject(profile);
+  });
+
+  it('saves first onboarding with the plan and full profile in one transaction', async () => {
+    const profile = {
+      gender: 'f' as const, birthDate: '1990-01-01', pubertyAge: 14, includeWitr: false, locale: 'en' as const,
+      onboardedAt: originalDay.toISOString(), nudgesEnabled: true,
+      lat: 30, lng: 31, locationLabel: 'Cairo', calcMethod: 'Egyptian',
+    };
+    const pace = { type: 'days_per_day' as const, value: 2 };
+    await saveEstimate(db, [{ start: originalDay, end: undoDay, level: 'all' }],
+      { avgCycleDays: 6, nifasDaysTotal: 0 }, { ...emptyCounts(), fajr: 4 }, activePrayers(false), profile, pace);
+    expect(await getProfile(db)).toMatchObject(profile);
+    expect(await getPlan(db)).toEqual(pace);
+    expect((await getSummary(db)).debt.fajr).toBe(4);
+    expect((await getEstimateInputs(db)).periods).toHaveLength(1);
+    expect((await getEstimateInputs(db)).women).toEqual({ avgCycleDays: 6, nifasDaysTotal: 0 });
+  });
+
+  it('leaves no partial onboarding data when the final profile write fails', async () => {
+    expect(await getProfile(db)).toBeNull();
+    await db.execAsync("CREATE TRIGGER reject_profile BEFORE UPDATE ON profile BEGIN SELECT RAISE(ABORT, 'test failure'); END");
+    await expect(saveEstimate(db, [{ start: originalDay, end: undoDay, level: 'all' }],
+      { avgCycleDays: 6, nifasDaysTotal: 0 }, { ...emptyCounts(), fajr: 4 }, activePrayers(false),
+      { gender: 'f', birthDate: '1990-01-01', pubertyAge: 14, includeWitr: false, locale: 'en',
+        onboardedAt: originalDay.toISOString(), nudgesEnabled: true, lat: 30, lng: 31 },
+      { type: 'days_per_day', value: 2 })).rejects.toThrow('test failure');
+    expect(await getProfile(db)).toBeNull();
+    expect(await getPlan(db)).toBeNull();
+    expect(await db.getAllAsync('SELECT * FROM plan')).toEqual([]);
+    expect(await db.getAllAsync('SELECT * FROM ledger')).toEqual([]);
+    expect(await getEstimateInputs(db)).toEqual({ periods: [], women: null });
   });
 
   it('reconciles obsolete Witr from the latest saved inputs, preserving completed Witr', async () => {
