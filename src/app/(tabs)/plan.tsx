@@ -11,14 +11,26 @@ import { useAppData } from '@/state/app-data';
 export default function PlanScreen() {
   const data = useAppData();
   const { t, locale, nc } = useI18n();
-  const [pace, setPace] = useState<Pace>(data.plan ?? { type: 'with_each', value: 1 });
+  const [draft, setDraft] = useState<{ source: Pace | null; pace: Pace }>({
+    source: data.plan, pace: data.plan ?? { type: 'with_each', value: 1 },
+  });
+  // An external plan replaces the displayed draft immediately, before effects run.
+  const pace = draft.source === data.plan ? draft.pace : data.plan ?? { type: 'with_each' as const, value: 1 };
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = null;
+  }, [data.plan]);
 
   // persist pace changes after a short pause (steppers fire many changes)
   const onPace = (p: Pace) => {
-    setPace(p);
+    setDraft({ source: data.plan, pace: p });
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => data.setPace(p), 400);
+    saveTimer.current = setTimeout(() => {
+      saveTimer.current = null;
+      void data.setPace(p);
+    }, 400);
   };
   useEffect(() => () => void (saveTimer.current && clearTimeout(saveTimer.current)), []);
 
