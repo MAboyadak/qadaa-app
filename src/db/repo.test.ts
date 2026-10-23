@@ -162,6 +162,34 @@ describe('atomic ledger writes (real SQLite)', () => {
     expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
   });
 
+  it('dismisses a successful log without rescheduling while that prayer still has debt', async () => {
+    await seed(2);
+    await expect(handleResponse(db, response({ kind: 'qada', prayer: 'fajr' })))
+      .resolves.toEqual({ logged: true, prayerAction: true });
+    expect((await getSummary(db)).remaining.fajr).toBe(1);
+    expect(Notifications.dismissNotificationAsync).toHaveBeenCalledWith('reminder-1');
+    expect(Notifications.cancelAllScheduledNotificationsAsync).not.toHaveBeenCalled();
+    expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+  });
+
+  it('dismisses the final prayer notification before cancelling and rebuilding the schedule', async () => {
+    await seed(1);
+    await seed(2, 'dhuhr');
+    await updateProfile(db, { onboardedAt: originalDay.toISOString(), locale: 'en', nudgesEnabled: true, lat: 30, lng: 31 });
+    await expect(handleResponse(db, response({ kind: 'qada', prayer: 'fajr' })))
+      .resolves.toEqual({ logged: true, prayerAction: true });
+    expect((await getSummary(db)).remaining.fajr).toBe(0);
+    expect(Notifications.dismissNotificationAsync).toHaveBeenCalledWith('reminder-1');
+    expect(Notifications.cancelAllScheduledNotificationsAsync).toHaveBeenCalledTimes(1);
+    expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
+    const dismissed = jest.mocked(Notifications.dismissNotificationAsync).mock.invocationCallOrder[0];
+    expect(dismissed).toBeLessThan(jest.mocked(Notifications.cancelAllScheduledNotificationsAsync).mock.invocationCallOrder[0]);
+    expect(dismissed).toBeLessThan(jest.mocked(Notifications.scheduleNotificationAsync).mock.invocationCallOrder[0]);
+    expect(jest.mocked(Notifications.scheduleNotificationAsync).mock.calls.every(
+      ([request]) => request.content.data?.prayer === 'dhuhr',
+    )).toBe(true);
+  });
+
   it.each(['undo', 're-estimate', 'adjust'] as const)(
     'restores reminders after %s makes a finished prayer remaining again',
     async (action) => {
