@@ -1,5 +1,5 @@
 import { useSQLiteContext } from 'expo-sqlite';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
 import * as repo from '@/db/repo';
@@ -55,6 +55,7 @@ const emptySummary = (): repo.PrayerSummary => ({
 
 export function AppDataProvider({ children, onReady }: { children: ReactNode; onReady?: () => void }) {
   const db = useSQLiteContext();
+  const ledgerWriteInFlight = useRef(false);
   const [state, setState] = useState<{
     profile: repo.Profile | null;
     summary: repo.PrayerSummary;
@@ -64,7 +65,7 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
     today: Date;
   } | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refreshSnapshot = useCallback(async () => {
     const [profile, summary, plan, byDay, dhikr] = await Promise.all([
       repo.getProfile(db),
       repo.getSummary(db),
@@ -73,7 +74,12 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
       repo.getDhikrReminders(db),
     ]);
     setState({ profile, summary, plan, byDay, dhikr, today: new Date() });
+    return { profile, summary };
   }, [db]);
+
+  const refresh = useCallback(async () => {
+    await refreshSnapshot();
+  }, [refreshSnapshot]);
 
   const reschedule = useCallback(async () => {
     try {
@@ -121,7 +127,7 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
       madeUpTotal,
       remainingTotal,
       target,
-      todayDone: s.byDay.get(toDayKey(s.today)) ?? 0,
+      todayDone: Math.max(0, s.byDay.get(toDayKey(s.today)) ?? 0),
       finishDate: projectedFinish(remainingTotal, target, s.today),
       streak: currentStreak(s.byDay, s.today),
       bestStreak: longestStreak(s.byDay),
@@ -131,22 +137,35 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
 
   const logOne = useCallback(
     async (prayer: Prayer) => {
-      const before = derived.madeUpTotal;
-      const logged = await repo.logMadeUp(db, prayer);
-      await refresh();
-      const milestone = logged
-        ? crossedMilestone(before, before + 1, derived.totalDebt, derived.prayersPerDay)
-        : undefined;
-      return { logged, milestone };
+      if (ledgerWriteInFlight.current) return { logged: false };
+      ledgerWriteInFlight.current = true;
+      try {
+        const logged = await repo.logMadeUp(db, prayer);
+        const { profile, summary } = await refreshSnapshot();
+        const includeWitr = profile?.includeWitr ?? false;
+        const after = sumCounts(summary.madeUp, includeWitr);
+        const milestone = logged
+          ? crossedMilestone(after - 1, after, sumCounts(summary.debt, includeWitr), activePrayers(includeWitr).length)
+          : undefined;
+        return { logged, milestone };
+      } finally {
+        ledgerWriteInFlight.current = false;
+      }
     },
-    [db, refresh, derived.madeUpTotal, derived.totalDebt, derived.prayersPerDay],
+    [db, refreshSnapshot],
   );
 
   const undoOne = useCallback(
     async (prayer: Prayer) => {
-      const ok = await repo.undoLast(db, prayer);
-      await refresh();
-      return ok;
+      if (ledgerWriteInFlight.current) return false;
+      ledgerWriteInFlight.current = true;
+      try {
+        const ok = await repo.undoLast(db, prayer);
+        await refresh();
+        return ok;
+      } finally {
+        ledgerWriteInFlight.current = false;
+      }
     },
     [db, refresh],
   );
