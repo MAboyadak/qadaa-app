@@ -139,7 +139,8 @@ export function validateBackup(json: string): ValidBackup {
     }
   }
   const ledgerById = new Map(result.ledger.map((row) => [row.id, row]));
-  const undone = new Set<BackupValue>();
+  // Older app versions could record two undos of one entry (a race), so duplicates
+  // must still import; rejecting them would lock users out of their own backups.
   for (const row of result.ledger) {
     if (row.kind === 'made_up' && row.delta !== -1) throw new BackupError('row', 'invalid made_up delta');
     if (row.kind !== 'undo') {
@@ -147,10 +148,9 @@ export function validateBackup(json: string): ValidBackup {
       continue;
     }
     const ref = ledgerById.get(row.ref_id);
-    if (row.delta !== 1 || !ref || ref.kind !== 'made_up' || ref.prayer !== row.prayer || undone.has(row.ref_id)) {
+    if (row.delta !== 1 || !ref || ref.kind !== 'made_up' || ref.prayer !== row.prayer) {
       throw new BackupError('row', 'invalid undo reference or delta');
     }
-    undone.add(row.ref_id);
   }
   return result;
 }
