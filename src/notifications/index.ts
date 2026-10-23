@@ -130,6 +130,21 @@ export async function rescheduleAll(db: SQLiteDatabase, now = new Date()): Promi
 }
 
 /**
+ * The background task receives Android's raw payload, where a local notification's
+ * data arrives as a JSON `dataString`; only the foreground listener maps it to `data`.
+ */
+function responseData(content: Notifications.NotificationContent): { kind?: string; prayer?: string } | undefined {
+  if (content.data) return content.data as { kind?: string; prayer?: string };
+  const raw = (content as { dataString?: unknown }).dataString;
+  if (typeof raw !== 'string') return undefined;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Handles a notification response (foreground listener or background task).
  * Identifies prayer actions even when another handler already logged them.
  */
@@ -137,7 +152,7 @@ export async function handleResponse(
   db: SQLiteDatabase,
   response: Pick<Notifications.NotificationResponse, 'actionIdentifier' | 'notification'>,
 ): Promise<{ logged: boolean; prayerAction: boolean }> {
-  const data = response.notification.request.content.data as { kind?: string; prayer?: string } | undefined;
+  const data = responseData(response.notification.request.content);
   if (response.actionIdentifier !== ACTION_DONE || data?.kind !== 'qada' || !data.prayer || !isPrayer(data.prayer)) {
     if (response.actionIdentifier === ACTION_DONE || response.actionIdentifier === ACTION_LATER) {
       await Notifications.dismissNotificationAsync(response.notification.request.identifier);
