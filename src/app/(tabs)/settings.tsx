@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 
@@ -30,6 +31,9 @@ import { CALC_METHODS } from '@/lib/prayer-times';
 import { hasExactAlarms, requestExactAlarms, requestPermission, sendTestNudge } from '@/notifications';
 import { useAppData } from '@/state/app-data';
 import { spacing } from '@/theme';
+
+// Opened in the user's browser on tap; the app itself still makes no network requests.
+const PRIVACY_POLICY_URL = 'https://maboyadak.github.io/qadaa-app/store/privacy-policy.html';
 
 export default function SettingsScreen() {
   const db = useSQLiteContext();
@@ -214,6 +218,11 @@ export default function SettingsScreen() {
       <SectionTitle>{t('settings.about')}</SectionTitle>
       <Card>
         <ListRow icon="book-open-variant" label={t('settings.sources')} onPress={() => router.push('/sources')} />
+        <ListRow
+          icon="shield-lock-outline"
+          label={t('settings.privacyPolicy')}
+          onPress={() => WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL).catch((e) => console.warn('privacy link', e))}
+        />
         <Divider />
         <AppText variant="bodyStrong">{t('settings.dedication')}</AppText>
         <AppText muted>{t('settings.dedicationBody')}</AppText>
