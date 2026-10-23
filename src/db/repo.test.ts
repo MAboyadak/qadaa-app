@@ -5,7 +5,6 @@ import { getMadeUpByDay, getEstimateInputs, getProfile, getSummary, saveEstimate
 import { migrate } from './schema';
 import { createTestDb } from './test-db';
 import { activePrayers, ALL_PRAYERS, emptyCounts, sumCounts } from '../domain/prayers';
-import { estimateFromStored } from '../lib/estimate-store';
 import { ACTION_DONE, ACTION_LATER, CATEGORY_QADA, handleResponse, rescheduleAll, sendTestNudge } from '../notifications';
 
 jest.mock('expo-notifications', () => ({
@@ -78,16 +77,46 @@ describe('atomic ledger writes (real SQLite)', () => {
   it('reconciles obsolete Witr from the latest saved inputs, preserving completed Witr', async () => {
     await setDebt(db, { ...emptyCounts(), witr: 100 }, ['witr']);
     await logMadeUp(db, 'witr');
-    // Re-estimate while Witr is disabled; its old debt is intentionally left alone.
+    // Re-estimate while Witr is disabled; update its debt within the same save.
     await saveEstimate(db, [{ start: originalDay, end: undoDay, level: 'all', perPrayer: { isha: 'half' } }],
       { avgCycleDays: 6, nifasDaysTotal: 0 }, { ...emptyCounts(), isha: 2 }, ['isha'],
       { gender: 'f', birthDate: '1990-01-01', pubertyAge: 14, includeWitr: false, locale: 'en' });
-    const counts = await estimateFromStored(db, true);
-    expect(counts?.witr).toBe(2); // follows Isha, including the saved cycle exclusion
-    await setDebt(db, counts!, ['witr']);
+    // Follows Isha, including the saved cycle exclusion, without toggling Witr on.
     expect((await getSummary(db)).debt.witr).toBe(2);
     expect((await getSummary(db)).remaining.witr).toBe(1);
     expect((await getSummary(db)).madeUp.witr).toBe(1);
+  });
+
+  it.each(['result', 'adjust'] as const)('preserves a manual Witr count from %s across profile toggles', async (source) => {
+    await setDebt(db, { ...emptyCounts(), witr: 100 }, ['witr']);
+    await logMadeUp(db, 'witr');
+    const profile = { gender: 'm' as const, birthDate: '1990-01-01', pubertyAge: 14, includeWitr: true, locale: 'en' as const };
+    // The raw period estimate is 4; the result screen's explicit Witr count wins.
+    await saveEstimate(db, [{ start: originalDay, end: undoDay, level: 'all' }], null,
+      { ...emptyCounts(), witr: 17 }, ALL_PRAYERS.slice(), profile);
+    expect((await getSummary(db)).debt.witr).toBe(17);
+    if (source === 'adjust') await setRemaining(db, { witr: 6 });
+    const before = await getSummary(db);
+    const ledger = await db.getAllAsync('SELECT * FROM ledger ORDER BY id');
+    await updateProfile(db, { includeWitr: false });
+    await updateProfile(db, { includeWitr: true });
+    expect(await getSummary(db)).toEqual(before);
+    expect((await getSummary(db)).remaining.witr).toBe(source === 'adjust' ? 6 : 16);
+    expect((await getSummary(db)).madeUp.witr).toBe(1);
+    expect(await db.getAllAsync('SELECT * FROM ledger ORDER BY id')).toEqual(ledger);
+  });
+
+  it('keeps completed Witr when a disabled re-estimate falls below the completed count', async () => {
+    await setDebt(db, { ...emptyCounts(), witr: 10 }, ['witr']);
+    await logMadeUp(db, 'witr');
+    await logMadeUp(db, 'witr');
+    await saveEstimate(db, [{ start: originalDay, end: originalDay, level: 'all' }], null,
+      emptyCounts(), activePrayers(false),
+      { gender: 'm', birthDate: '1990-01-01', pubertyAge: 14, includeWitr: false, locale: 'en' });
+    const summary = await getSummary(db);
+    expect(summary.debt.witr).toBe(1);
+    expect(summary.remaining.witr).toBe(0);
+    expect(summary.madeUp.witr).toBe(2);
   });
 
   it('only schedules prayer reminders for prayers with remaining debt', async () => {

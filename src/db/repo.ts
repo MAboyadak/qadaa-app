@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { BACKUP_VERSION, validateBackup } from '@/domain/backup';
 import { toDayKey, type DayKey } from '@/domain/dates';
-import type { EstimatePeriod, MissedLevel } from '@/domain/estimate';
+import { estimateMissed, type EstimatePeriod, type MissedLevel } from '@/domain/estimate';
 import type { LedgerKind } from '@/domain/ledger';
 import type { Pace, PaceType } from '@/domain/plan';
 import { ALL_PRAYERS, emptyCounts, isPrayer, type Prayer, type PrayerCounts } from '@/domain/prayers';
@@ -132,7 +132,15 @@ export async function saveEstimate(
 ): Promise<void> {
   await db.withTransactionAsync(async () => {
     await writeEstimateInputs(db, periods, women);
-    await writeDebt(db, counts, prayers);
+    // Keep disabled Witr current too, so enabling it need not replace manual counts.
+    const witr = profile.includeWitr ? counts.witr : estimateMissed({
+      periods,
+      gender: profile.gender ?? 'm',
+      includeWitr: true,
+      avgCycleDays: women?.avgCycleDays,
+      nifasDaysTotal: women?.nifasDaysTotal,
+    }).witr;
+    await writeDebt(db, { ...counts, witr }, prayers.includes('witr') ? prayers : [...prayers, 'witr']);
     await updateProfile(db, profile);
   });
 }
