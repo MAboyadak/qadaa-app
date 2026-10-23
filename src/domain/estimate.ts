@@ -1,4 +1,4 @@
-import { diffDays, inclusiveDays } from './dates';
+import { addDays, addYears, diffDays, inclusiveDays } from './dates';
 import { activePrayers, emptyCounts, type Prayer, type PrayerCounts } from './prayers';
 
 /** How much of a period's prayers were missed. */
@@ -21,6 +21,29 @@ export interface EstimateInput {
   avgCycleDays?: number;
   /** Women only: total days of nifas across all births (no qada for them). */
   nifasDaysTotal?: number;
+}
+
+/** Suggests an earlier year without including days before obligation began. */
+export function newEstimatePeriod(periods: EstimatePeriod[], pubertyDate: Date): EstimatePeriod {
+  const earliest = periods.reduce((a, p) => p.start < a ? p.start : a, periods[0]?.start ?? pubertyDate);
+  const end = new Date(Math.max(pubertyDate.getTime(), addDays(earliest, -1).getTime()));
+  const start = new Date(Math.max(pubertyDate.getTime(), addDays(addYears(end, -1), 1).getTime()));
+  return { start, end, level: 'some' };
+}
+
+/** Keep native picker bounds valid even for old inputs or a future puberty date. */
+export function periodDateBounds(period: EstimatePeriod, pubertyDate: Date, today = new Date()) {
+  const endMinimum = new Date(Math.max(pubertyDate.getTime(), period.start.getTime()));
+  return {
+    start: {
+      minimumDate: pubertyDate,
+      maximumDate: new Date(Math.max(pubertyDate.getTime(), period.end.getTime())),
+    },
+    end: {
+      minimumDate: endMinimum,
+      maximumDate: new Date(Math.max(endMinimum.getTime(), today.getTime())),
+    },
+  };
 }
 
 /** Inclusive local-day ranges overlap even when they share only one day. */
