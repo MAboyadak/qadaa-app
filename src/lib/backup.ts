@@ -7,12 +7,12 @@ import { exportBackup, importBackup } from '@/db/repo';
 import { toDayKey } from '@/domain/dates';
 
 /** Writes a JSON backup to the cache and opens the share sheet (Drive, WhatsApp, Files…). */
-export async function shareBackup(db: SQLiteDatabase): Promise<void> {
+export async function shareBackup(db: SQLiteDatabase, dialogTitle: string): Promise<void> {
   const file = new File(Paths.cache, `qadaa-backup-${toDayKey(new Date())}.json`);
   if (file.exists) file.delete();
   file.create();
   await file.write(await exportBackup(db));
-  await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Qadaa backup' });
+  await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle });
 }
 
 /** Lets the user pick a backup file and restores it. Returns false if the user cancelled. */

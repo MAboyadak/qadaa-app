@@ -106,6 +106,14 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db]);
 
+  useEffect(() => {
+    if (!state) return;
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const timer = setTimeout(() => { void refresh(); }, midnight.getTime() - now.getTime());
+    return () => clearTimeout(timer);
+  }, [state, refresh]);
+
   const derived = useMemo(() => {
     const s = state ?? { profile: null, summary: emptySummary(), plan: null, byDay: new Map(), dhikr: [], today: new Date() };
     const includeWitr = s.profile?.includeWitr ?? false;
@@ -141,6 +149,7 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
       ledgerWriteInFlight.current = true;
       try {
         const logged = await repo.logMadeUp(db, prayer);
+        if (logged) void reschedule();
         const { profile, summary } = await refreshSnapshot();
         const includeWitr = profile?.includeWitr ?? false;
         const after = sumCounts(summary.madeUp, includeWitr);
@@ -152,7 +161,7 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
         ledgerWriteInFlight.current = false;
       }
     },
-    [db, refreshSnapshot],
+    [db, refreshSnapshot, reschedule],
   );
 
   const undoOne = useCallback(
