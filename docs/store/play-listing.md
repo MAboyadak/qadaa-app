@@ -1,8 +1,8 @@
 # Google Play listing (draft)
 
 ## App name (max 30)
-- AR: قضاء – متابعة الصلوات الفائتة
-- EN: Qadaa – Missed Prayers Tracker
+- AR: قضاء الصلوات الفائتة ومتابعتها
+- EN: Qadaa Planner: Missed Prayers
 
 ## Short description (max 80)
 - AR: قدّر صلواتك الفائتة، وضع خطة تناسب وقتك، وتابع قضاءها يومًا بيوم.
