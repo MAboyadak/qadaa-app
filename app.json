@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "قضاء",
+    "name": "قضاء الصلوات",
     "slug": "qadaa",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -43,10 +43,10 @@
     },
     "locales": {
       "ar": {
-        "app_name": "قضاء"
+        "app_name": "قضاء الصلوات"
       },
       "en": {
-        "app_name": "Qadaa"
+        "app_name": "Qadaa Planner"
       }
     },
     "plugins": [
