@@ -100,6 +100,11 @@ const columns = {
 } satisfies Record<string, Record<string, ColumnCheck>>;
 
 type Table = keyof typeof columns;
+
+/** Column names per table, for the test that keeps this spec in sync with schema.ts. */
+export const BACKUP_COLUMNS = Object.fromEntries(
+  Object.entries(columns).map(([table, spec]) => [table, Object.keys(spec)]),
+) as Record<Table, string[]>;
 export type ValidBackup = {
   [T in Table]: Record<keyof (typeof columns)[T], BackupValue>[];
 };

@@ -1,5 +1,8 @@
-import { BACKUP_VERSION, BackupError, validateBackup } from './backup';
+import { DatabaseSync } from 'node:sqlite';
+
+import { BACKUP_COLUMNS, BACKUP_VERSION, BackupError, validateBackup } from './backup';
 import { BackupError as RepoBackupError, exportBackup, importBackup } from '../db/repo';
+import { migrate } from '../db/schema';
 
 const validBackup = () => ({
   app: 'qadaa',
@@ -163,13 +166,29 @@ describe('validateBackup', () => {
 
 describe('backup repository integration', () => {
   function mockDatabase() {
+    // Separate spies: writes must go through the transaction, never the outer connection.
     const runAsync = jest.fn().mockResolvedValue({});
+    const dbRunAsync = jest.fn().mockResolvedValue({});
     const withExclusiveTransactionAsync = jest.fn(async (callback) => callback({ runAsync }));
     const { app: _app, version: _version, exportedAt: _exportedAt, ...tables } = validBackup();
     const getAllAsync = jest.fn(async (sql: string) => tables[sql.replace('SELECT * FROM ', '') as keyof typeof tables]);
-    const db = { runAsync, withExclusiveTransactionAsync, getAllAsync };
-    return { db: db as unknown as Parameters<typeof importBackup>[0], runAsync, withExclusiveTransactionAsync };
+    const db = { runAsync: dbRunAsync, withExclusiveTransactionAsync, getAllAsync };
+    return { db: db as unknown as Parameters<typeof importBackup>[0], runAsync, dbRunAsync, withExclusiveTransactionAsync };
   }
+
+  it('lists exactly the columns that schema.ts creates', async () => {
+    const sqlite = new DatabaseSync(':memory:');
+    const db = {
+      execAsync: async (sql: string) => sqlite.exec(sql),
+      getFirstAsync: async (sql: string) => sqlite.prepare(sql).get(),
+    };
+    await migrate(db as unknown as Parameters<typeof migrate>[0]);
+    for (const [table, cols] of Object.entries(BACKUP_COLUMNS)) {
+      const actual = (sqlite.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name);
+      expect([table, actual.sort()]).toEqual([table, [...cols].sort()]);
+    }
+    sqlite.close();
+  });
 
   it('keeps the existing BackupError re-export', () => {
     expect(RepoBackupError).toBe(BackupError);
@@ -183,11 +202,12 @@ describe('backup repository integration', () => {
   });
 
   it('imports an actual export with all rows inside the exclusive transaction', async () => {
-    const { db, runAsync, withExclusiveTransactionAsync } = mockDatabase();
+    const { db, runAsync, dbRunAsync, withExclusiveTransactionAsync } = mockDatabase();
     const json = await exportBackup(db);
     expect(validateBackup(json).ledger).toEqual(validBackup().ledger);
     await importBackup(db, json);
     expect(withExclusiveTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(dbRunAsync).not.toHaveBeenCalled();
     expect(runAsync.mock.calls.filter(([sql]) => sql.startsWith('DELETE FROM '))).toHaveLength(6);
     expect(runAsync.mock.calls.filter(([sql]) => sql.startsWith('INSERT INTO '))).toHaveLength(9);
     expect(runAsync).toHaveBeenCalledWith(
