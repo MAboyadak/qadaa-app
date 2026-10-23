@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PacePicker } from '@/components/pace-picker';
 import { AppText, Card, Screen, Stepper } from '@/components/ui';
 import { diffDays } from '@/domain/dates';
+import { reconcilePaceDraft, type PaceDraft } from '@/domain/pace-draft';
 import { splitDuration, type Pace } from '@/domain/plan';
 import { useI18n } from '@/i18n';
 import { formatDate, formatHijri } from '@/lib/format';
@@ -11,28 +12,37 @@ import { useAppData } from '@/state/app-data';
 export default function PlanScreen() {
   const data = useAppData();
   const { t, locale, nc } = useI18n();
-  const [draft, setDraft] = useState<{ source: Pace | null; pace: Pace }>({
-    source: data.plan, pace: data.plan ?? { type: 'with_each', value: 1 },
+  const [draft, setDraft] = useState<PaceDraft>({
+    source: data.plan, pace: data.plan, local: [], externalRevision: 0,
   });
-  // An external plan replaces the displayed draft immediately, before effects run.
-  const pace = draft.source === data.plan ? draft.pace : data.plan ?? { type: 'with_each' as const, value: 1 };
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const current = reconcilePaceDraft(draft, data.plan);
+  if (current !== draft) setDraft(current);
+  const pace = current.pace ?? { type: 'with_each' as const, value: 1 };
+  const pending = useRef<{ timer: ReturnType<typeof setTimeout>; save: () => void } | null>(null);
 
+  // Only external changes cancel a draft; fresh objects and save acknowledgements do not.
   useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = null;
-  }, [data.plan]);
+    if (pending.current) clearTimeout(pending.current.timer);
+    pending.current = null;
+  }, [current.externalRevision]);
 
-  // persist pace changes after a short pause (steppers fire many changes)
   const onPace = (p: Pace) => {
-    setDraft({ source: data.plan, pace: p });
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      saveTimer.current = null;
-      void data.setPace(p);
+    setDraft((previous) => ({ ...previous, pace: p, local: [...previous.local, p] }));
+    if (pending.current) clearTimeout(pending.current.timer);
+    const save = () => { void data.setPace(p); };
+    const timer = setTimeout(() => {
+      pending.current = null;
+      save();
     }, 400);
+    pending.current = { timer, save };
   };
-  useEffect(() => () => void (saveTimer.current && clearTimeout(saveTimer.current)), []);
+  useEffect(() => () => {
+    if (pending.current) {
+      clearTimeout(pending.current.timer);
+      pending.current.save();
+      pending.current = null;
+    }
+  }, []);
 
   const finish = data.finishDate;
   const days = finish ? diffDays(new Date(), finish) : null;
