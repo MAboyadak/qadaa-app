@@ -199,6 +199,7 @@ export const en: Strings = {
     importFailed: 'Invalid file',
     about: 'About',
     sources: 'Sources',
+    privacyPolicy: 'Privacy policy',
     dedication: 'Sadaqah jariyah',
     dedicationBody: 'This app is free, with no ads, no accounts and no data collection. All your data stays on your device. We ask Allah to accept it as an ongoing charity.',
     privacy: 'Privacy: we collect no data and the app connects to no server.',
