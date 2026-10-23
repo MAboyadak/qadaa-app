@@ -138,6 +138,16 @@ describe('atomic ledger writes (real SQLite)', () => {
     expect(await rows('made_up')).toHaveLength(1);
   });
 
+  it('logs from the background task payload, where Android sends data as dataString', async () => {
+    await seed(3);
+    const raw = {
+      actionIdentifier: ACTION_DONE,
+      notification: { request: { identifier: 'reminder-bg', content: { dataString: JSON.stringify({ kind: 'qada', prayer: 'fajr' }) } } },
+    } as unknown as Parameters<typeof handleResponse>[1];
+    expect(await handleResponse(db, raw)).toEqual({ logged: true, prayerAction: true });
+    expect(await rows('made_up')).toHaveLength(1);
+  });
+
   it('identifies a prayer action even when no debt remains', async () => {
     expect(await handleResponse(db, response({ kind: 'qada', prayer: 'fajr' }))).toEqual({
       logged: false, prayerAction: true,
