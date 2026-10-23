@@ -40,7 +40,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           entering={FadeInDown}
           exiting={FadeOutDown}
           pointerEvents="box-none"
-          style={{ position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: insets.bottom + 72 }}>
+          style={{ position: 'absolute', start: spacing.lg, end: spacing.lg, bottom: insets.bottom + 72 }}>
           <View
             accessibilityLiveRegion="polite"
             style={{
