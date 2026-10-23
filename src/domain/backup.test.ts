@@ -40,6 +40,12 @@ describe('validateBackup', () => {
     expect(validateBackup(JSON.stringify({ app, version, exportedAt, ...validated }))).toEqual(rows);
   });
 
+  it('accepts two undos of one entry written by older app versions', () => {
+    const backup = validBackup();
+    backup.ledger.push({ ...backup.ledger[2], id: 5 });
+    expect(validateBackup(JSON.stringify(backup)).ledger).toHaveLength(backup.ledger.length);
+  });
+
   it('allows empty optional tables', () => {
     const backup = validBackup();
     backup.estimate_period = [];
@@ -103,7 +109,6 @@ describe('validateBackup', () => {
     ['non-undo reference', (b) => { b.ledger[0].ref_id = 2; }, 'row'],
     ['undo missing ref', (b) => { b.ledger[2].ref_id = null; }, 'row'],
     ['undo dangling ref', (b) => { b.ledger[2].ref_id = 99; }, 'row'],
-    ['duplicate undo', (b) => { b.ledger.push({ ...b.ledger[2], id: 5 }); }, 'row'],
     ['undo referencing estimate', (b) => { b.ledger[2].ref_id = 1; }, 'row'],
     ['undo referencing another prayer', (b) => { b.ledger[2].prayer = 'asr'; }, 'row'],
     ['undo delta -1', (b) => { b.ledger[2].delta = -1; }, 'row'],
