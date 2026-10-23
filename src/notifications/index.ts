@@ -82,7 +82,19 @@ export async function hasPermission(): Promise<boolean> {
 }
 
 /** Cancels and re-creates every scheduled notification from the current settings. */
-export async function rescheduleAll(db: SQLiteDatabase, now = new Date()): Promise<number> {
+let rescheduleQueue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Serialized: each run cancels everything and schedules again, so two overlapping runs
+ * (e.g. logging several prayers quickly) could leave duplicate or stale reminders.
+ */
+export function rescheduleAll(db: SQLiteDatabase, now = new Date()): Promise<number> {
+  const run = rescheduleQueue.then(() => rescheduleNow(db, now));
+  rescheduleQueue = run.catch(() => undefined);
+  return run;
+}
+
+async function rescheduleNow(db: SQLiteDatabase, now: Date): Promise<number> {
   await Notifications.cancelAllScheduledNotificationsAsync();
   const profile = await getProfile(db);
   if (!profile?.onboardedAt || !(await hasPermission())) return 0;

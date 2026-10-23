@@ -102,6 +102,25 @@ describe('atomic ledger writes (real SQLite)', () => {
     expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
   });
 
+  it('runs overlapping reschedules one after another, never interleaved', async () => {
+    await seed(1);
+    await updateProfile(db, { onboardedAt: originalDay.toISOString(), locale: 'en', nudgesEnabled: true, lat: 30, lng: 31 });
+    const order: string[] = [];
+    jest.mocked(Notifications.cancelAllScheduledNotificationsAsync).mockImplementation(async () => { order.push('cancel'); });
+    jest.mocked(Notifications.scheduleNotificationAsync).mockImplementation(async () => { order.push('schedule'); return 'id'; });
+    try {
+      await Promise.all([rescheduleAll(db, originalDay), rescheduleAll(db, originalDay)]);
+      // A second 'cancel' may only appear after the first run finished scheduling.
+      const second = order.indexOf('cancel', 1);
+      expect(second).toBeGreaterThan(1);
+      expect(order.slice(1, second).every((step) => step === 'schedule')).toBe(true);
+      expect(order.slice(second + 1).every((step) => step === 'schedule')).toBe(true);
+    } finally {
+      jest.mocked(Notifications.cancelAllScheduledNotificationsAsync).mockResolvedValue(undefined);
+      jest.mocked(Notifications.scheduleNotificationAsync).mockResolvedValue('test-id');
+    }
+  });
+
   it('keeps a notification log successful when renewal fails', async () => {
     await seed(1);
     jest.mocked(Notifications.cancelAllScheduledNotificationsAsync).mockRejectedValueOnce(new Error('scheduler unavailable'));
