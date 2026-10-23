@@ -12,7 +12,7 @@ const validBackup = () => ({
     nudge_offset_min: 20, onboarded_at: '2026-01-01T12:00:00.000Z',
   }],
   estimate_period: [{
-    id: 1, start_date: '2024-02-29', end_date: '2025-01-01', level: 'all', per_prayer_json: null,
+    id: 1, start_date: '2024-02-29', end_date: '2025-01-01', level: 'all', per_prayer_json: null as string | null,
   }],
   estimate_women: [{ id: 1, avg_cycle_days: 6.5, nifas_days_total: 40 }],
   ledger: [
@@ -49,6 +49,12 @@ describe('validateBackup', () => {
   it('accepts a period that ends before it starts, as onboarding can save one', () => {
     const backup = validBackup();
     backup.estimate_period[0].start_date = '2026-01-01';
+    expect(validateBackup(JSON.stringify(backup)).estimate_period).toEqual(backup.estimate_period);
+  });
+
+  it('accepts per-prayer levels as saved by the estimate screen', () => {
+    const backup = validBackup();
+    backup.estimate_period[0].per_prayer_json = '{"fajr":"most","isha":"some"}';
     expect(validateBackup(JSON.stringify(backup)).estimate_period).toEqual(backup.estimate_period);
   });
 
@@ -112,7 +118,11 @@ describe('validateBackup', () => {
     ['duplicate ledger id', (b) => { b.ledger[1].id = 1; }, 'row'],
     ['duplicate plan id', (b) => { b.plan.push({ ...b.plan[0] }); }, 'row'],
     ['non-undo reference', (b) => { b.ledger[0].ref_id = 2; }, 'row'],
-    ['unsafe integer id', (b) => { b.ledger[0].id = 1e20; }, 'row'],
+    ['unknown missed level', (b) => { b.estimate_period[0].level = 'bogus'; }, 'row'],
+    ['per-prayer json not json', (b) => { b.estimate_period[0].per_prayer_json = '{bad'; }, 'row'],
+    ['per-prayer json bad prayer', (b) => { b.estimate_period[0].per_prayer_json = '{"noon":"all"}'; }, 'row'],
+    ['per-prayer json bad level', (b) => { b.estimate_period[0].per_prayer_json = '{"fajr":"lots"}'; }, 'row'],
+    ['unsafe integer id',(b) => { b.ledger[0].id = 1e20; }, 'row'],
     ['unsafe integer delta', (b) => { b.ledger[0].delta = 2 ** 53; }, 'row'],
     ['undo missing ref',(b) => { b.ledger[2].ref_id = null; }, 'row'],
     ['undo dangling ref', (b) => { b.ledger[2].ref_id = 99; }, 'row'],
