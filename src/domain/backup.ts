@@ -1,3 +1,4 @@
+import { MISSED_LEVELS } from './estimate';
 import { isPrayer } from './prayers';
 
 export const BACKUP_VERSION = 1;
@@ -31,6 +32,21 @@ const day: ColumnCheck = (v) => {
   return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === date;
 };
 
+const missedLevel: ColumnCheck = (v) => typeof v === 'string' && Object.hasOwn(MISSED_LEVELS, v);
+
+/** null, or JSON of { [prayer]: level } as written by saveEstimateInputs. */
+const perPrayerJson: ColumnCheck = (v) => {
+  if (v === null) return true;
+  if (typeof v !== 'string') return false;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(v);
+  } catch {
+    return false;
+  }
+  return isObject(parsed) && Object.entries(parsed).every(([p, level]) => isPrayer(p) && missedLevel(level));
+};
+
 /** All exported columns from schema.ts; even nullable columns must be present. */
 const columns = {
   profile: {
@@ -53,8 +69,8 @@ const columns = {
     id: integer,
     start_date: day,
     end_date: day,
-    level: nonEmptyText,
-    per_prayer_json: nullable(text),
+    level: missedLevel,
+    per_prayer_json: perPrayerJson,
   },
   estimate_women: { id: singleton, avg_cycle_days: finite, nifas_days_total: finite },
   ledger: {
