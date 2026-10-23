@@ -18,14 +18,18 @@ export default function HistoryScreen() {
     <Screen>
       <AppText variant="title">{t('history.title')}</AppText>
 
-      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-        <Stat label={t('history.streak')} value={n(data.streak)} />
-        <Stat label={t('history.bestStreak')} value={n(data.bestStreak)} />
-        <Stat label={t('history.totalMadeUp')} value={n(data.madeUpTotal)} />
-        <Stat
-          label={t('history.daysMadeUp')}
-          value={n(Math.floor(data.madeUpTotal / Math.max(1, data.prayersPerDay)))}
-        />
+      <View style={{ gap: spacing.sm }}>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <Stat label={t('history.streak')} value={n(data.streak)} />
+          <Stat label={t('history.bestStreak')} value={n(data.bestStreak)} />
+        </View>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <Stat label={t('history.totalMadeUp')} value={n(data.madeUpTotal)} />
+          <Stat
+            label={t('history.daysMadeUp')}
+            value={n(Math.floor(data.madeUpTotal / Math.max(1, data.prayersPerDay)))}
+          />
+        </View>
       </View>
 
       <Card>
