@@ -1,4 +1,4 @@
-import { estimateMissed, overlappingPeriods, type EstimatePeriod } from './estimate';
+import { estimateMissed, newEstimatePeriod, overlappingPeriods, periodDateBounds, type EstimatePeriod } from './estimate';
 
 const d = (s: string) => new Date(`${s}T12:00:00`);
 
@@ -103,5 +103,64 @@ describe('overlappingPeriods', () => {
   });
   it('ignores reversed periods even inside another range', () => {
     expect(overlappingPeriods([period('2020-01-01', '2020-01-20'), period('2020-01-10', '2020-01-05')])).toBe(false);
+  });
+});
+
+
+describe('onboarding period defaults and picker bounds', () => {
+  const puberty = d('2010-01-01');
+  const period = (start: string, end: string): EstimatePeriod => ({ start: d(start), end: d(end), level: 'all' });
+
+  it('defaults to the year before the earliest period when there is room', () => {
+    const periods = [period('2015-01-01', '2015-12-31'), period('2013-01-01', '2013-12-31')];
+    const next = newEstimatePeriod(periods, puberty);
+    expect(next.start).toEqual(d('2012-01-02'));
+    expect(next.end).toEqual(d('2012-12-31'));
+    expect(overlappingPeriods([...periods, next])).toBe(false);
+  });
+
+  it('shortens the earlier year at puberty', () => {
+    const periods = [period('2010-06-01', '2011-01-01')];
+    const next = newEstimatePeriod(periods, puberty);
+    expect(next.start).toEqual(puberty);
+    expect(next.end).toEqual(d('2010-05-31'));
+    expect(overlappingPeriods([...periods, next])).toBe(false);
+  });
+
+  it('defaults both dates to puberty when there is no earlier room', () => {
+    const periods = [period('2010-01-01', '2011-01-01')];
+    const next = newEstimatePeriod(periods, puberty);
+    expect(next.start).toEqual(puberty);
+    expect(next.end).toEqual(puberty);
+    // Estimates count inclusive days, so the existing overlap guidance blocks continuation.
+    expect(overlappingPeriods([...periods, next])).toBe(true);
+  });
+
+  it('never defaults before puberty even with old pre-birth inputs or no periods', () => {
+    for (const periods of [[], [period('1980-01-01', '1980-12-31')]]) {
+      const next = newEstimatePeriod(periods, puberty);
+      expect(next.start).toEqual(puberty);
+      expect(next.end).toEqual(puberty);
+    }
+  });
+
+  it.each([
+    ['2000-01-01', '2001-01-01'], // old inputs before puberty
+    ['2011-01-01', '2009-01-01'], // reversed input
+    ['2030-01-01', '2031-01-01'], // minimum beyond today
+    ['2010-01-01', '2010-01-01'], // no earlier room
+  ])('keeps both picker bounds ordered for %s to %s', (start, end) => {
+    const bounds = periodDateBounds(period(start, end), puberty, d('2026-01-01'));
+    for (const field of [bounds.start, bounds.end]) {
+      expect(field.minimumDate.getTime()).toBeGreaterThanOrEqual(puberty.getTime());
+      expect(field.maximumDate.getTime()).toBeGreaterThanOrEqual(field.minimumDate.getTime());
+    }
+  });
+
+  it('keeps bounds ordered when puberty itself is in the future', () => {
+    const futurePuberty = d('2035-01-01');
+    const bounds = periodDateBounds(period('2010-01-01', '2020-01-01'), futurePuberty, d('2026-01-01'));
+    expect(bounds.start).toEqual({ minimumDate: futurePuberty, maximumDate: futurePuberty });
+    expect(bounds.end).toEqual({ minimumDate: futurePuberty, maximumDate: futurePuberty });
   });
 });

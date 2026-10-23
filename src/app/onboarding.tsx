@@ -10,8 +10,8 @@ import { PacePicker } from '@/components/pace-picker';
 import { useToast } from '@/components/toast';
 import { AppText, Button, Card, Icon, Screen, Segmented, Stepper, SwitchRow } from '@/components/ui';
 import { BackupError, getEstimateInputs, saveEstimate, setPlan } from '@/db/repo';
-import { addDays, addYears, fromDayKey } from '@/domain/dates';
-import { estimateMissed, overlappingPeriods, MISSED_LEVELS, type EstimatePeriod, type MissedLevel } from '@/domain/estimate';
+import { addYears, fromDayKey } from '@/domain/dates';
+import { estimateMissed, newEstimatePeriod, overlappingPeriods, periodDateBounds, MISSED_LEVELS, type EstimatePeriod, type MissedLevel } from '@/domain/estimate';
 import type { Pace } from '@/domain/plan';
 import { activePrayers, sumCounts, type Prayer, type PrayerCounts } from '@/domain/prayers';
 import { useI18n, type Locale } from '@/i18n';
@@ -237,7 +237,7 @@ export default function Onboarding() {
               index={i}
               period={p}
               includeWitr={includeWitr}
-              minDate={birthDate}
+              minDate={pubertyDate}
               onChange={(np) => setPeriods(effectivePeriods.map((x, j) => (j === i ? np : x)))}
               onRemove={i > 0 ? () => setPeriods(effectivePeriods.filter((_, j) => j !== i)) : undefined}
             />
@@ -247,11 +247,7 @@ export default function Onboarding() {
             title={t('onboarding.periods.addPeriod')}
             icon="plus"
             variant="secondary"
-            onPress={() => {
-              const earliest = effectivePeriods.reduce((a, p) => p.start < a ? p.start : a, effectivePeriods[0].start);
-              const end = addDays(earliest, -1);
-              setPeriods([...effectivePeriods, { start: addDays(addYears(end, -1), 1), end, level: 'some' }]);
-            }}
+            onPress={() => setPeriods([...effectivePeriods, newEstimatePeriod(effectivePeriods, pubertyDate)])}
           />
         </>
       ) : null}
@@ -396,6 +392,7 @@ function PeriodCard({
 }) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(!!period.perPrayer);
+  const bounds = periodDateBounds(period, minDate);
   const levelOptions = LEVELS.map((l) => ({ value: l, label: t(`levels.${l}`) }));
 
   return (
@@ -410,14 +407,13 @@ function PeriodCard({
         <DateField
           label={t('onboarding.periods.from')}
           value={period.start}
-          minimumDate={minDate}
-          maximumDate={period.end}
+          {...bounds.start}
           onChange={(start) => onChange({ ...period, start })}
         />
         <DateField
           label={t('onboarding.periods.to')}
           value={period.end}
-          minimumDate={period.start}
+          {...bounds.end}
           onChange={(end) => onChange({ ...period, end })}
         />
       </View>
