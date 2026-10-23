@@ -14,6 +14,7 @@ import {
   type Pace,
 } from '@/domain/plan';
 import { activePrayers, sumCounts, type Prayer } from '@/domain/prayers';
+import { scheduleMidnightRefresh } from '@/lib/midnight-refresh';
 import { rescheduleAll } from '@/notifications';
 
 export interface AppData {
@@ -108,10 +109,7 @@ export function AppDataProvider({ children, onReady }: { children: ReactNode; on
 
   useEffect(() => {
     if (!state) return;
-    const now = new Date();
-    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    const timer = setTimeout(() => { void refresh(); }, midnight.getTime() - now.getTime());
-    return () => clearTimeout(timer);
+    return scheduleMidnightRefresh(refresh);
   }, [state, refresh]);
 
   const derived = useMemo(() => {
