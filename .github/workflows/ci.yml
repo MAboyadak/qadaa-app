@@ -31,10 +31,13 @@ jobs:
       - run: npm test -- --ci
       # Bundles the JS for Android: catches broken imports and Metro errors without a native build.
       - run: npx expo export --platform android --output-dir dist/export
-      # Warns about out-of-date Expo patch versions without failing the build: new upstream releases
-      # would otherwise turn CI red on unchanged code.
+      # Only newer patch releases are advisory; incompatible versions still fail.
+      - run: node --test scripts/check-expo-versions.test.cjs
+      - run: node scripts/check-expo-versions.cjs
       - name: expo-doctor
-        continue-on-error: true
+        env:
+          # Replaced by the stricter version check above. Keep every other doctor check.
+          EXPO_DOCTOR_SKIP_DEPENDENCY_VERSION_CHECK: '1'
         run: npx -y expo-doctor
 
   android:
