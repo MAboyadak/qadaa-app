@@ -24,10 +24,10 @@
 ## Needs you (blockers)
 1. **Google Play developer account** ($25) and the 12-tester closed test (14 days).
 2. **Scholar review** of `docs/fiqh-rules.md` ⚠ items, `src/content/adhkar.json` and `src/content/hope.json` (all marked `reviewed: false`).
-3. **Contact email** for the privacy policy (`docs/store/privacy-policy.md`) and a public URL to host it.
+3. ~~Contact email~~: done (`docs/store/privacy-policy.md`). Still needs a **public URL** to host the policy.
 4. **Confirm the app name and package id** (`com.qadaa.prayers`). The package can't change after the first upload.
 5. ~~Git identity~~: done, this repo commits with your personal email.
-6. **Expo account** (free), only if you want cloud builds via EAS instead of local Gradle builds.
+6. **Expo account** (free): needed now; EAS will create and keep the Play upload key and build the signed app bundle.
 
 ## Verified on the emulator (Pixel 7, Android 16 / API 36)
 - Onboarding end-to-end in Arabic (RTL); live language switch both ways
