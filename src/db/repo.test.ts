@@ -1,15 +1,18 @@
 import type { NotificationResponse } from 'expo-notifications';
 import * as Notifications from 'expo-notifications';
 
-import { getMadeUpByDay, getSummary, logMadeUp, setDebt, setRemaining, undoLast } from './repo';
+import { getMadeUpByDay, getEstimateInputs, getProfile, getSummary, saveEstimate, updateProfile, logMadeUp, setDebt, setRemaining, undoLast } from './repo';
 import { migrate } from './schema';
 import { createTestDb } from './test-db';
 import { activePrayers, ALL_PRAYERS, emptyCounts, sumCounts } from '../domain/prayers';
-import { ACTION_DONE, ACTION_LATER, CATEGORY_QADA, handleResponse, sendTestNudge } from '../notifications';
+import { estimateFromStored } from '../lib/estimate-store';
+import { ACTION_DONE, ACTION_LATER, CATEGORY_QADA, handleResponse, rescheduleAll, sendTestNudge } from '../notifications';
 
 jest.mock('expo-notifications', () => ({
   AndroidImportance: { DEFAULT: 3 },
-  SchedulableTriggerInputTypes: { TIME_INTERVAL: 'timeInterval' },
+  SchedulableTriggerInputTypes: { TIME_INTERVAL: 'timeInterval', DATE: 'date', DAILY: 'daily' },
+  cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(undefined),
+  getPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
   setNotificationHandler: jest.fn(),
   dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
   scheduleNotificationAsync: jest.fn().mockResolvedValue('test-id'),
@@ -43,6 +46,74 @@ describe('atomic ledger writes (real SQLite)', () => {
     );
   }
   const rows = (kind: string) => db.getAllAsync('SELECT * FROM ledger WHERE kind = ?', kind);
+
+  it('saves estimate inputs, debt and profile together, preserving completed prayers', async () => {
+    await seed(10);
+    await logMadeUp(db, 'fajr');
+    await saveEstimate(db, [{ start: originalDay, end: undoDay, level: 'half' }],
+      { avgCycleDays: 6, nifasDaysTotal: 20 }, { ...emptyCounts(), fajr: 8 }, ['fajr'],
+      { gender: 'f', birthDate: '1990-01-01', pubertyAge: 14, includeWitr: false, locale: 'en' });
+    expect((await getEstimateInputs(db)).women).toEqual({ avgCycleDays: 6, nifasDaysTotal: 20 });
+    expect((await getEstimateInputs(db)).periods[0].level).toBe('half');
+    expect(await getProfile(db)).toMatchObject({ gender: 'f', locale: 'en', pubertyAge: 14 });
+    expect((await getSummary(db)).remaining.fajr).toBe(7);
+    expect((await getSummary(db)).madeUp.fajr).toBe(1);
+  });
+
+  it('rolls back inputs and debt when the profile write fails at the end', async () => {
+    const profile = { gender: 'm' as const, birthDate: '1990-01-01', pubertyAge: 14, includeWitr: false, locale: 'en' as const };
+    await saveEstimate(db, [{ start: originalDay, end: originalDay, level: 'all' }], null,
+      { ...emptyCounts(), fajr: 10 }, ['fajr'], profile);
+    const inputs = await getEstimateInputs(db);
+    const ledger = await db.getAllAsync('SELECT * FROM ledger ORDER BY id');
+    await db.execAsync("CREATE TRIGGER reject_profile BEFORE UPDATE ON profile BEGIN SELECT RAISE(ABORT, 'test failure'); END");
+    await expect(saveEstimate(db, [{ start: undoDay, end: undoDay, level: 'half' }],
+      { avgCycleDays: 7, nifasDaysTotal: 30 }, { ...emptyCounts(), fajr: 20 }, ['fajr'],
+      { ...profile, gender: 'f', locale: 'ar' })).rejects.toThrow('test failure');
+    expect(await getEstimateInputs(db)).toEqual(inputs);
+    expect(await db.getAllAsync('SELECT * FROM ledger ORDER BY id')).toEqual(ledger);
+    expect(await getProfile(db)).toMatchObject(profile);
+  });
+
+  it('reconciles obsolete Witr from the latest saved inputs, preserving completed Witr', async () => {
+    await setDebt(db, { ...emptyCounts(), witr: 100 }, ['witr']);
+    await logMadeUp(db, 'witr');
+    // Re-estimate while Witr is disabled; its old debt is intentionally left alone.
+    await saveEstimate(db, [{ start: originalDay, end: undoDay, level: 'all', perPrayer: { isha: 'half' } }],
+      { avgCycleDays: 6, nifasDaysTotal: 0 }, { ...emptyCounts(), isha: 2 }, ['isha'],
+      { gender: 'f', birthDate: '1990-01-01', pubertyAge: 14, includeWitr: false, locale: 'en' });
+    const counts = await estimateFromStored(db, true);
+    expect(counts?.witr).toBe(2); // follows Isha, including the saved cycle exclusion
+    await setDebt(db, counts!, ['witr']);
+    expect((await getSummary(db)).debt.witr).toBe(2);
+    expect((await getSummary(db)).remaining.witr).toBe(1);
+    expect((await getSummary(db)).madeUp.witr).toBe(1);
+  });
+
+  it('only schedules prayer reminders for prayers with remaining debt', async () => {
+    await seed(1);
+    await updateProfile(db, { onboardedAt: originalDay.toISOString(), locale: 'en', nudgesEnabled: true, lat: 30, lng: 31 });
+    await rescheduleAll(db, originalDay);
+    const calls = jest.mocked(Notifications.scheduleNotificationAsync).mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.every(([request]) => request.content.data?.prayer === 'fajr')).toBe(true);
+    jest.mocked(Notifications.scheduleNotificationAsync).mockClear();
+    await handleResponse(db, response({ kind: 'qada', prayer: 'fajr' }));
+    expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+  });
+
+  it('keeps a notification log successful when renewal fails', async () => {
+    await seed(1);
+    jest.mocked(Notifications.cancelAllScheduledNotificationsAsync).mockRejectedValueOnce(new Error('scheduler unavailable'));
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await expect(handleResponse(db, response({ kind: 'qada', prayer: 'fajr' }))).resolves.toEqual({ logged: true, prayerAction: true });
+      expect((await getSummary(db)).madeUp.fajr).toBe(1);
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
 
   it('aggregates remaining, total debt and net made-up counts from the ledger', async () => {
     await seed(10);

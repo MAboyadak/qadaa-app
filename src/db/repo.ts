@@ -97,25 +97,43 @@ export async function saveEstimateInputs(
   periods: EstimatePeriod[],
   women: WomenInputs | null,
 ): Promise<void> {
+  await db.withTransactionAsync(() => writeEstimateInputs(db, periods, women));
+}
+
+async function writeEstimateInputs(db: SQLiteDatabase, periods: EstimatePeriod[], women: WomenInputs | null): Promise<void> {
+  await db.runAsync('DELETE FROM estimate_period');
+  for (const p of periods) {
+    await db.runAsync(
+      'INSERT INTO estimate_period (start_date, end_date, level, per_prayer_json) VALUES (?, ?, ?, ?)',
+      toDayKey(p.start),
+      toDayKey(p.end),
+      p.level,
+      p.perPrayer ? JSON.stringify(p.perPrayer) : null,
+    );
+  }
+  await db.runAsync('DELETE FROM estimate_women');
+  if (women) {
+    await db.runAsync(
+      'INSERT INTO estimate_women (id, avg_cycle_days, nifas_days_total) VALUES (1, ?, ?)',
+      women.avgCycleDays,
+      women.nifasDaysTotal,
+    );
+  }
+}
+
+/** Saves the inputs, estimate debt and associated profile fields as one unit. */
+export async function saveEstimate(
+  db: SQLiteDatabase,
+  periods: EstimatePeriod[],
+  women: WomenInputs | null,
+  counts: PrayerCounts,
+  prayers: Prayer[],
+  profile: Pick<Profile, 'gender' | 'birthDate' | 'pubertyAge' | 'includeWitr' | 'locale'>,
+): Promise<void> {
   await db.withTransactionAsync(async () => {
-    await db.runAsync('DELETE FROM estimate_period');
-    for (const p of periods) {
-      await db.runAsync(
-        'INSERT INTO estimate_period (start_date, end_date, level, per_prayer_json) VALUES (?, ?, ?, ?)',
-        toDayKey(p.start),
-        toDayKey(p.end),
-        p.level,
-        p.perPrayer ? JSON.stringify(p.perPrayer) : null,
-      );
-    }
-    await db.runAsync('DELETE FROM estimate_women');
-    if (women) {
-      await db.runAsync(
-        'INSERT INTO estimate_women (id, avg_cycle_days, nifas_days_total) VALUES (1, ?, ?)',
-        women.avgCycleDays,
-        women.nifasDaysTotal,
-      );
-    }
+    await writeEstimateInputs(db, periods, women);
+    await writeDebt(db, counts, prayers);
+    await updateProfile(db, profile);
   });
 }
 
@@ -205,14 +223,16 @@ export async function getMadeUpByDay(
 
 /** Records the initial estimate, or moves the total debt to a new estimate (re-estimate). */
 export async function setDebt(db: SQLiteDatabase, target: PrayerCounts, prayers: Prayer[]): Promise<void> {
-  await db.withTransactionAsync(async () => {
-    const { debt } = await getSummary(db);
-    const hasAny = ALL_PRAYERS.some((p) => debt[p] !== 0);
-    for (const p of prayers) {
-      const delta = target[p] - debt[p];
-      if (delta !== 0) await append(db, p, delta, hasAny ? 'adjust' : 'estimate');
-    }
-  });
+  await db.withTransactionAsync(() => writeDebt(db, target, prayers));
+}
+
+async function writeDebt(db: SQLiteDatabase, target: PrayerCounts, prayers: Prayer[]): Promise<void> {
+  const { debt } = await getSummary(db);
+  const hasAny = ALL_PRAYERS.some((p) => debt[p] !== 0);
+  for (const p of prayers) {
+    const delta = target[p] - debt[p];
+    if (delta !== 0) await append(db, p, delta, hasAny ? 'adjust' : 'estimate');
+  }
 }
 
 /** Sets what remains for each prayer by appending adjustments. */

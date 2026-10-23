@@ -62,7 +62,7 @@ export default function SettingsScreen() {
   };
 
   const setWitr = async (on: boolean) => {
-    if (on && data.summary.debt.witr === 0) {
+    if (on) {
       const counts = await estimateFromStored(db, true);
       if (counts) await setDebt(db, counts, ['witr']);
     }
@@ -97,7 +97,8 @@ export default function SettingsScreen() {
               toast({ message: t('settings.importDone') });
             }
           } catch (e) {
-            toast({ message: e instanceof BackupError ? t('settings.importFailed') : String(e) });
+            console.warn('Backup restore failed', e);
+            toast({ message: e instanceof BackupError ? t('settings.importFailed') : t('common.error') });
           }
         },
       },
@@ -203,7 +204,10 @@ export default function SettingsScreen() {
       <Card>
         <ListRow icon="pencil-outline" label={t('settings.adjust')} onPress={() => router.push('/adjust')} />
         <ListRow icon="calculator-variant-outline" label={t('settings.reestimate')} onPress={onReestimate} />
-        <ListRow icon="export-variant" label={t('settings.export')} onPress={() => shareBackup(db).catch((e) => toast({ message: String(e) }))} />
+        <ListRow icon="export-variant" label={t('settings.export')} onPress={() => shareBackup(db, t('settings.backupTitle')).catch((e) => {
+          console.warn('Backup export failed', e);
+          toast({ message: t('common.error') });
+        })} />
         <ListRow icon="import" label={t('settings.import')} onPress={onImport} />
       </Card>
 

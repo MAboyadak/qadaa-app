@@ -4,7 +4,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { Platform } from 'react-native';
 
 import adhkar from '@/content/adhkar.json';
-import { getDhikrReminders, getProfile, logMadeUp } from '@/db/repo';
+import { getDhikrReminders, getProfile, getSummary, logMadeUp } from '@/db/repo';
 import { addDays } from '@/domain/dates';
 import { FARD_PRAYERS, isPrayer } from '@/domain/prayers';
 import { translate } from '@/i18n';
@@ -87,6 +87,7 @@ export async function rescheduleAll(db: SQLiteDatabase, now = new Date()): Promi
   const profile = await getProfile(db);
   if (!profile?.onboardedAt || !(await hasPermission())) return 0;
 
+  const { remaining } = await getSummary(db);
   const locale = profile.locale;
   let count = 0;
 
@@ -95,6 +96,7 @@ export async function rescheduleAll(db: SQLiteDatabase, now = new Date()): Promi
       const day = addDays(now, i);
       const times = prayerTimesFor(day, profile.lat, profile.lng, profile.calcMethod);
       for (const prayer of FARD_PRAYERS) {
+        if (remaining[prayer] === 0) continue;
         const at = new Date(times[prayer].getTime() + profile.nudgeOffsetMin * 60_000);
         if (at <= now) continue;
         const name = translate(locale, `prayers.${prayer}`);
@@ -163,6 +165,13 @@ export async function handleResponse(
   // Both the background task and the foreground listener may see the same response.
   const source = `notif:${id}`;
   const logged = await logMadeUp(db, data.prayer, source);
+  if (logged) {
+    try {
+      await rescheduleAll(db);
+    } catch (e) {
+      console.warn('reschedule failed', e);
+    }
+  }
   await Notifications.dismissNotificationAsync(id);
   return { logged, prayerAction: true };
 }

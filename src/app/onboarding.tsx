@@ -9,9 +9,9 @@ import { LocationPicker, locationLabel, type PickedLocation } from '@/components
 import { PacePicker } from '@/components/pace-picker';
 import { useToast } from '@/components/toast';
 import { AppText, Button, Card, Icon, Screen, Segmented, Stepper, SwitchRow } from '@/components/ui';
-import { BackupError, getEstimateInputs, saveEstimateInputs, setDebt, setPlan } from '@/db/repo';
-import { addYears, fromDayKey } from '@/domain/dates';
-import { estimateMissed, MISSED_LEVELS, type EstimatePeriod, type MissedLevel } from '@/domain/estimate';
+import { BackupError, getEstimateInputs, saveEstimate, setPlan } from '@/db/repo';
+import { addDays, addYears, fromDayKey } from '@/domain/dates';
+import { estimateMissed, overlappingPeriods, MISSED_LEVELS, type EstimatePeriod, type MissedLevel } from '@/domain/estimate';
 import type { Pace } from '@/domain/plan';
 import { activePrayers, sumCounts, type Prayer, type PrayerCounts } from '@/domain/prayers';
 import { useI18n, type Locale } from '@/i18n';
@@ -99,19 +99,19 @@ export default function Onboarding() {
     });
 
   const next = async () => {
+    if (step === 'periods' && overlappingPeriods(effectivePeriods)) return;
     if (steps[stepIndex + 1] === 'result') setCounts(computeEstimate());
     if (!isLast) return setStepIndex((i) => i + 1);
     await finish();
   };
 
   const finish = async () => {
-    if (!counts) return;
+    if (!counts || overlappingPeriods(effectivePeriods)) return;
     setSaving(true);
     const prayers = activePrayers(includeWitr);
-    await saveEstimateInputs(db, effectivePeriods, gender === 'f' ? { avgCycleDays: cycleDays, nifasDaysTotal: nifasDays } : null);
-    await setDebt(db, counts, prayers);
+    await saveEstimate(db, effectivePeriods, gender === 'f' ? { avgCycleDays: cycleDays, nifasDaysTotal: nifasDays } : null, counts, prayers, { gender, birthDate: dayKey(birthDate), pubertyAge, includeWitr, locale });
+    await data.refresh();
     if (reestimate) {
-      await data.updateProfile({ gender, birthDate: dayKey(birthDate), pubertyAge, includeWitr });
       router.back();
       return;
     }
@@ -119,6 +119,7 @@ export default function Onboarding() {
     const granted = notify ? await requestPermission() : false;
     await data.updateProfile(
       {
+        locale,
         gender,
         birthDate: dayKey(birthDate),
         pubertyAge,
@@ -141,11 +142,13 @@ export default function Onboarding() {
         router.replace('/');
       }
     } catch (e) {
-      toast({ message: e instanceof BackupError ? t('settings.importFailed') : String(e) });
+      console.warn('Backup restore failed', e);
+      toast({ message: e instanceof BackupError ? t('settings.importFailed') : t('common.error') });
     }
   };
 
-  const canContinue = step !== 'result' || (counts !== null && sumCounts(counts, includeWitr) > 0);
+  const hasOverlap = overlappingPeriods(effectivePeriods);
+  const canContinue = (step !== 'periods' || !hasOverlap) && (step !== 'result' || (counts !== null && sumCounts(counts, includeWitr) > 0));
 
   return (
     <Screen
@@ -238,13 +241,16 @@ export default function Onboarding() {
               onRemove={i > 0 ? () => setPeriods(effectivePeriods.filter((_, j) => j !== i)) : undefined}
             />
           ))}
+          {hasOverlap ? <AppText muted>{t('onboarding.periods.overlap')}</AppText> : null}
           <Button
             title={t('onboarding.periods.addPeriod')}
             icon="plus"
             variant="secondary"
-            onPress={() =>
-              setPeriods([...effectivePeriods, { start: addYears(new Date(), -1), end: new Date(), level: 'some' }])
-            }
+            onPress={() => {
+              const earliest = effectivePeriods.reduce((a, p) => p.start < a ? p.start : a, effectivePeriods[0].start);
+              const end = addDays(earliest, -1);
+              setPeriods([...effectivePeriods, { start: addDays(addYears(end, -1), 1), end, level: 'some' }]);
+            }}
           />
         </>
       ) : null}
