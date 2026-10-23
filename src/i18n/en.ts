@@ -3,6 +3,7 @@ import type { Strings } from './ar';
 export const en: Strings = {
   appName: 'Qadaa',
   common: {
+    error: 'Something went wrong. Please try again.',
     next: 'Next',
     back: 'Back',
     done: 'Done',
@@ -59,6 +60,7 @@ export const en: Strings = {
       witrHint: 'Witr is a confirmed sunnah for most scholars and wajib for Hanafis. Turn it on if you want to make it up.',
     },
     periods: {
+      overlap: 'Some periods share the same days. Please adjust the dates so each day is counted once.',
       title: 'When did you miss prayers?',
       subtitle: 'Your best estimate is enough. An exact count is not required.',
       from: 'From',
@@ -168,6 +170,7 @@ export const en: Strings = {
     celebrate: 'Masha Allah! {name}',
   },
   settings: {
+    backupTitle: 'Qadaa backup',
     title: 'Settings',
     language: 'Language',
     languageRestart: 'The app will restart to apply the language.',
