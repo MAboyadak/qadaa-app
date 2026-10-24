@@ -2,6 +2,7 @@
   "name": "qadaa-launch-video",
   "private": true,
   "scripts": {
+    "ambience": "node scripts/make-ambience.mjs",
     "studio": "remotion studio",
     "render": "remotion render src/index.ts Launch out/qadaa-launch.mp4"
   },
