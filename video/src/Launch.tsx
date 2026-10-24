@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import {
   AbsoluteFill,
+  Audio,
   Img,
   interpolate,
   Sequence,
@@ -46,6 +47,7 @@ export const Launch = () => {
   return (
     <AbsoluteFill style={{ background: C.bg, fontFamily: 'Plex', direction: 'rtl' }}>
       <style>{fontFace}</style>
+      <Audio src={staticFile('ambience.wav')} volume={0.65} />
       <Glow />
       <Sequence {...at(0)}>
         <Hook />
@@ -224,8 +226,8 @@ function Outro() {
         src={staticFile('icon.png')}
         style={{ width: 260, height: 260, borderRadius: 60, transform: `scale(${p})`, boxShadow: '0 30px 80px rgba(0,0,0,.35)' }}
       />
-      <div style={{ fontSize: 120, fontWeight: 700, color: C.gold, marginTop: 30, opacity: p }}>قضاء</div>
-      <div style={{ fontSize: 40, color: C.sand, opacity: p2, direction: 'ltr' }}>Qadaa · Missed Prayers Tracker</div>
+      <div style={{ fontSize: 96, maxWidth: 960, fontWeight: 700, color: C.gold, marginTop: 30, opacity: p }}>قضاء الصلوات</div>
+      <div style={{ fontSize: 40, color: C.sand, opacity: p2, direction: 'ltr' }}>Qadaa Planner · Missed Prayers</div>
       <div style={{ fontSize: 44, fontWeight: 500, color: C.sand, marginTop: 40, opacity: p2, lineHeight: 1.6 }}>
         مجاني · بلا إعلانات · بياناتك على جهازك
       </div>
